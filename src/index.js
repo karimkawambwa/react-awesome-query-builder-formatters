@@ -192,7 +192,7 @@ const operators = {
     label: "Contains",
     labelForFormat: "Contains",
     reversedOp: "not_like",
-    sqlOp: "LIKE",
+    sqlOp: "~*",
     spelOp: ".contains",
     spelOps: ["matches", ".contains"],
     mongoFormatOp: mongoFormatOp1.bind(null, "$regex", v => (typeof v == "string" ? escapeRegExp(v) : undefined), false),
@@ -207,14 +207,14 @@ const operators = {
     label: "Not contains",
     reversedOp: "like",
     labelForFormat: "Not Contains",
-    sqlOp: "NOT LIKE",
+    sqlOp: "!~*",
     mongoFormatOp: mongoFormatOp1.bind(null, "$regex", v => (typeof v == "string" ? escapeRegExp(v) : undefined), true),
     valueSources: ["value"],
   },
   starts_with: {
     label: "Starts with",
     labelForFormat: "Starts with",
-    sqlOp: "LIKE",
+    sqlOp: "~*",
     spelOp: ".startsWith",
     spelOps: ["matches", ".startsWith"],
     mongoFormatOp: mongoFormatOp1.bind(null, "$regex", v => (typeof v == "string" ? "^" + escapeRegExp(v) : undefined), false),
@@ -224,7 +224,7 @@ const operators = {
   ends_with: {
     label: "Ends with",
     labelForFormat: "Ends with",
-    sqlOp: "LIKE",
+    sqlOp: "~*",
     spelOp: ".endsWith",
     spelOps: ["matches", ".endsWith"],
     mongoFormatOp: mongoFormatOp1.bind(null, "$regex", v => (typeof v == "string" ? escapeRegExp(v) + "$" : undefined), false),
@@ -410,22 +410,38 @@ const operators = {
   },
   contains_any_in: {
     label: "Contains any in",
-    labelForFormat: "IN",
-    sqlOp: "IN",
+    labelForFormat: "Contains any in",
+    reversedOp: "contains_none_in",
     sqlFormatOp: (field, op, values, valueSrc, valueType, opDef, operatorOptions, fieldDef) => {
       if (valueSrc == "value") {
-        return `${field} ~* (${values.join("|")})`;
-      } else return undefined; // not supported
+        return `${field} ~* (${values.map(v => `(${v})`).join("|")})`;
+      } else {
+        return undefined; // not supported
+      }
     }
   },
   contains_none_in: {
+    isNotOp: true,
     label: "Contains none in",
-    labelForFormat: "IN",
-    sqlOp: "IN",
+    labelForFormat: "Contains none in",
     sqlFormatOp: (field, op, values, valueSrc, valueType, opDef, operatorOptions, fieldDef) => {
       if (valueSrc == "value") {
-        return `${field} IN (${values.join(", ")})`;
-      } else return undefined; // not supported
+        return `${field} !~* (${values.map(v => `(${SqlString.trim(v)})`).join("")})`;
+      } else {
+        return undefined; // not supported
+      }
+    }
+  },
+  contains_all_in: {
+    label: "Contains all in",
+    labelForFormat: "Contains all in",
+    reversedOp: "contains_none_in",
+    sqlFormatOp: (field, op, values, valueSrc, valueType, opDef, operatorOptions, fieldDef) => {
+      if (valueSrc == "value") {
+        return `${field} ~* (${values.map(v => `(${SqlString.trim(v)})`).join("")})`;
+      } else {
+        return undefined; // not supported
+      }
     }
   },
   select_any_in: {
@@ -613,7 +629,7 @@ const widgets = {
       }
     },
     sqlFormatValue: (val, fieldDef, wgtDef, op, opDef) => {
-      if (opDef.sqlOp == "LIKE" || opDef.sqlOp == "NOT LIKE") {
+      if (opDef.sqlOp == "~*" || opDef.sqlOp == "!~*") {
         return SqlString.escapeLike(val, op != "starts_with", op != "ends_with");
       } else {
         return SqlString.escape(val);
@@ -633,7 +649,7 @@ const widgets = {
       return isForDisplay ? stringifyForDisplay(val) : JSON.stringify(val);
     },
     sqlFormatValue: (val, fieldDef, wgtDef, op, opDef) => {
-      if (opDef.sqlOp == "LIKE" || opDef.sqlOp == "NOT LIKE") {
+      if (opDef.sqlOp == "~*" || opDef.sqlOp == "!~*") {
         return SqlString.escapeLike(val, op != "starts_with", op != "ends_with");
       } else {
         return SqlString.escape(val);
@@ -823,7 +839,6 @@ const widgets = {
     type: "datetime",
     jsType: "string",
     valueSrc: "value",
-
     timeFormat: "HH:mm",
     dateFormat: "DD.MM.YYYY",
     valueFormat: "YYYY-MM-DD HH:mm:ss",
@@ -1105,9 +1120,11 @@ const types = {
       },
       multiselect: {
         operators: [
-          "contains_any_in",
           "select_any_in",
           "select_not_any_in",
+          "contains_all_in",
+          "contains_any_in",
+          "contains_none_in",
           // "is_empty",
           // "is_not_empty",
           "is_null",

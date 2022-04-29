@@ -2,11 +2,12 @@ let SqlString = require("sqlstring");
 
 SqlString.trim = (val) => {
   if (val.charAt(0) == "'")
-    return val.substring(1, val.length-1);
+    return val.substring(1, val.length - 1);
   else
     return val;
 };
 
+// Use regex to represent LIKE SQL query
 SqlString.escapeLike = (val, any_start = true, any_end = true) => {
   // normal escape
   let res = SqlString.escape(val);
@@ -15,7 +16,7 @@ SqlString.escapeLike = (val, any_start = true, any_end = true) => {
   // escape % and _
   res = res.replace(/[%_]/g, "\\$&");
   // wrap with % for LIKE
-  res = (any_start ? "%" : "") + res + (any_end ? "%" : "");
+  res = (any_start ? ".*" : "^") + res + (any_end ? ".*" : "$");
   // wrap ''
   res = "'" + res + "'";
   return res;
@@ -94,7 +95,7 @@ const spelInlineList = (vals, toArray = false) => {
   } else {
     res = `{${escapedVals.join(", ")}}`;
   }
-  
+
   return res;
 };
 
@@ -110,20 +111,20 @@ const spelEscape = (val, numberToFloat = false, arrayToArray = false) => {
     return "null";
   }
   switch (typeof val) {
-  case "boolean":
-    return (val) ? "true" : "false";
-  case "number":
-    if (!Number.isFinite(val) || isNaN(val))
-      return undefined;
-    return val + (!Number.isInteger(val) || numberToFloat ? "f" : "");
-  case "object":
-    if (Array.isArray(val)) {
-      return spelInlineList(val, arrayToArray);
-    } else {
-      // see `spelFormatValue` for Date, LocalTime
-      throw new Error("spelEscape: Object is not supported");
-    }
-  default: return spelEscapeString(val);
+    case "boolean":
+      return (val) ? "true" : "false";
+    case "number":
+      if (!Number.isFinite(val) || isNaN(val))
+        return undefined;
+      return val + (!Number.isInteger(val) || numberToFloat ? "f" : "");
+    case "object":
+      if (Array.isArray(val)) {
+        return spelInlineList(val, arrayToArray);
+      } else {
+        // see `spelFormatValue` for Date, LocalTime
+        throw new Error("spelEscape: Object is not supported");
+      }
+    default: return spelEscapeString(val);
   }
 };
 
@@ -134,9 +135,9 @@ const spelFormatConcat = (parts) => {
         if (part.type == "const") {
           return spelEscape(part.value);
         } else if (part.type == "property") {
-          return ""+part.value;
+          return "" + part.value;
         } else if (part.type == "variable") {
-          return "#"+part.value;
+          return "#" + part.value;
         } return undefined;
       })
       .filter(r => r != undefined)
@@ -159,13 +160,13 @@ const spelImportConcat = (val) => {
         return undefined;
       } else {
         return {
-          type: "const", 
+          type: "const",
           value: child.value
         };
       }
     } else if (child.valueSrc == "field") {
       return {
-        type: (child.isVariable ? "variable" : "property"), 
+        type: (child.isVariable ? "variable" : "property"),
         value: child.value
       };
     } else {
@@ -176,6 +177,7 @@ const spelImportConcat = (val) => {
 };
 
 export {
-  SqlString, sqlEmptyValue, 
+  SqlString, sqlEmptyValue,
   mongoEmptyValue, spelEscape, spelFixList, spelFormatConcat, spelImportConcat
 };
+
