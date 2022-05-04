@@ -17,6 +17,6 @@
   },
   "scripts": {
     "build": "tsc",
-    "watch": "tsc-watch --onSuccess \"yalc push\""
+    "watch": "npx tsc-watch --onSuccess \"npx yalc push\""
   }
 }
