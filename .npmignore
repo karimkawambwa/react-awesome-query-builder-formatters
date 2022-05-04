@@ -1,0 +1,14 @@
+node_modules
+package-lock.json
+npm-debug.log
+.idea
+.eslintcache
+.gitignore
+.git
+.github
+.vscode
+.circleci
+.travis.yml
+*.log
+
+src
