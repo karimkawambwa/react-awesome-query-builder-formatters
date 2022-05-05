@@ -1,7 +1,13 @@
-import moment from "moment";
-import { settings as defaultSettings } from "./settings";
-import { mongoEmptyValue, spelEscape, spelFixList, sqlEmptyValue, SqlString } from "./utils/export";
-import { escapeRegExp, getTitleInListValues } from "./utils/stuff";
+import moment from "moment"
+import { settings as defaultSettings } from "./settings"
+import {
+  mongoEmptyValue,
+  spelEscape,
+  spelFixList,
+  sqlEmptyValue,
+  SqlString,
+} from "./utils/export"
+import { escapeRegExp, getTitleInListValues } from "./utils/stuff"
 
 //----------------------------  conjunctions
 
@@ -16,19 +22,25 @@ const conjunctions = {
     reversedConj: "OR",
     formatConj: (children, conj, not, isForDisplay) => {
       return children.size > 1
-        ? (not ? "NOT " : "") + "(" + children.join(" " + (isForDisplay ? "AND" : "&&") + " ") + ")"
-        : (not ? "NOT (" : "") + children.first() + (not ? ")" : "");
+        ? (not ? "NOT " : "") +
+            "(" +
+            children.join(" " + (isForDisplay ? "AND" : "&&") + " ") +
+            ")"
+        : (not ? "NOT (" : "") + children.first() + (not ? ")" : "")
     },
     sqlFormatConj: (children, conj, not) => {
       return children.size > 1
         ? (not ? "NOT " : "") + "(" + children.join(" " + "AND" + " ") + ")"
-        : (not ? "NOT (" : "") + children.first() + (not ? ")" : "");
+        : (not ? "NOT (" : "") + children.first() + (not ? ")" : "")
     },
     spelFormatConj: (children, conj, not, omitBrackets) => {
-      if (not) omitBrackets = false;
+      if (not) omitBrackets = false
       return children.size > 1
-        ? (not ? "!" : "") + (omitBrackets ? "" : "(") + children.join(" " + "&&" + " ") + (omitBrackets ? "" : ")")
-        : (not ? "!(" : "") + children.first() + (not ? ")" : "");
+        ? (not ? "!" : "") +
+            (omitBrackets ? "" : "(") +
+            children.join(" " + "&&" + " ") +
+            (omitBrackets ? "" : ")")
+        : (not ? "!(" : "") + children.first() + (not ? ")" : "")
     },
   },
   OR: {
@@ -41,72 +53,102 @@ const conjunctions = {
     reversedConj: "AND",
     formatConj: (children, conj, not, isForDisplay) => {
       return children.size > 1
-        ? (not ? "NOT " : "") + "(" + children.join(" " + (isForDisplay ? "OR" : "||") + " ") + ")"
-        : (not ? "NOT (" : "") + children.first() + (not ? ")" : "");
+        ? (not ? "NOT " : "") +
+            "(" +
+            children.join(" " + (isForDisplay ? "OR" : "||") + " ") +
+            ")"
+        : (not ? "NOT (" : "") + children.first() + (not ? ")" : "")
     },
     sqlFormatConj: (children, conj, not) => {
       return children.size > 1
         ? (not ? "NOT " : "") + "(" + children.join(" " + "OR" + " ") + ")"
-        : (not ? "NOT (" : "") + children.first() + (not ? ")" : "");
+        : (not ? "NOT (" : "") + children.first() + (not ? ")" : "")
     },
     spelFormatConj: (children, conj, not, omitBrackets) => {
-      if (not) omitBrackets = false;
+      if (not) omitBrackets = false
       return children.size > 1
-        ? (not ? "!" : "") + (omitBrackets ? "" : "(") + children.join(" " + "||" + " ") + (omitBrackets ? "" : ")")
-        : (not ? "!(" : "") + children.first() + (not ? ")" : "");
+        ? (not ? "!" : "") +
+            (omitBrackets ? "" : "(") +
+            children.join(" " + "||" + " ") +
+            (omitBrackets ? "" : ")")
+        : (not ? "!(" : "") + children.first() + (not ? ")" : "")
     },
   },
-};
+}
 
 //----------------------------  operators
 
 // helpers for mongo format
-export const mongoFormatOp1 = (mop, mc, not, field, _op, value, useExpr, valueSrc, valueType, opDef, operatorOptions, fieldDef) => {
-  const $field = typeof field == "string" && !field.startsWith("$") ? "$" + field : field;
-  const mv = mc(value, fieldDef);
-  if (mv === undefined)
-    return undefined;
+export const mongoFormatOp1 = (
+  mop,
+  mc,
+  not,
+  field,
+  _op,
+  value,
+  useExpr,
+  valueSrc,
+  valueType,
+  opDef,
+  operatorOptions,
+  fieldDef
+) => {
+  const $field =
+    typeof field == "string" && !field.startsWith("$") ? "$" + field : field
+  const mv = mc(value, fieldDef)
+  if (mv === undefined) return undefined
   if (not) {
-    if (!useExpr && (!mop || mop == "$eq"))
-      return { [field]: { "$ne": mv } }; // short form
+    if (!useExpr && (!mop || mop == "$eq")) return { [field]: { $ne: mv } } // short form
     return !useExpr
-      ? { [field]: { "$not": { [mop]: mv } } }
-      : { "$not": { [mop]: [$field, mv] } };
+      ? { [field]: { $not: { [mop]: mv } } }
+      : { $not: { [mop]: [$field, mv] } }
   } else {
-    if (!useExpr && (!mop || mop == "$eq"))
-      return { [field]: mv }; // short form
-    return !useExpr
-      ? { [field]: { [mop]: mv } }
-      : { [mop]: [$field, mv] };
+    if (!useExpr && (!mop || mop == "$eq")) return { [field]: mv } // short form
+    return !useExpr ? { [field]: { [mop]: mv } } : { [mop]: [$field, mv] }
   }
-};
+}
 
-export const mongoFormatOp2 = (mops, not, field, _op, values, useExpr, valueSrcs, valueTypes, opDef, operatorOptions, fieldDef) => {
-  const $field = typeof field == "string" && !field.startsWith("$") ? "$" + field : field;
+export const mongoFormatOp2 = (
+  mops,
+  not,
+  field,
+  _op,
+  values,
+  useExpr,
+  valueSrcs,
+  valueTypes,
+  opDef,
+  operatorOptions,
+  fieldDef
+) => {
+  const $field =
+    typeof field == "string" && !field.startsWith("$") ? "$" + field : field
   if (not) {
     return !useExpr
-      ? { [field]: { "$not": { [mops[0]]: values[0], [mops[1]]: values[1] } } }
-      : {
-        "$not":
-        {
-          "$and": [
-            { [mops[0]]: [$field, values[0]] },
-            { [mops[1]]: [$field, values[1]] },
-          ]
+      ? {
+          [field]: {
+            $not: { [mops[0]]: values[0], [mops[1]]: values[1] },
+          },
         }
-      };
+      : {
+          $not: {
+            $and: [
+              { [mops[0]]: [$field, values[0]] },
+              { [mops[1]]: [$field, values[1]] },
+            ],
+          },
+        }
   } else {
     return !useExpr
       ? { [field]: { [mops[0]]: values[0], [mops[1]]: values[1] } }
       : {
-        "$and": [
-          { [mops[0]]: [$field, values[0]] },
-          { [mops[1]]: [$field, values[1]] },
-        ]
-      };
+          $and: [
+            { [mops[0]]: [$field, values[0]] },
+            { [mops[1]]: [$field, values[1]] },
+          ],
+        }
   }
-};
-
+}
 
 const operators = {
   equal: {
@@ -116,14 +158,23 @@ const operators = {
     spelOp: "==",
     spelOps: ["==", "eq"],
     reversedOp: "not_equal",
-    formatOp: (field, op, value, valueSrcs, valueTypes, opDef, operatorOptions, isForDisplay, fieldDef) => {
-      const opStr = isForDisplay ? "=" : opDef.label;
+    formatOp: (
+      field,
+      op,
+      value,
+      valueSrcs,
+      valueTypes,
+      opDef,
+      operatorOptions,
+      isForDisplay,
+      fieldDef
+    ) => {
+      const opStr = isForDisplay ? "=" : opDef.label
       if (valueTypes == "boolean" && isForDisplay)
-        return value == "No" ? `NOT ${field}` : `${field}`;
-      else
-        return `${field} ${opStr} ${value}`;
+        return value == "No" ? `NOT ${field}` : `${field}`
+      else return `${field} ${opStr} ${value}`
     },
-    mongoFormatOp: mongoFormatOp1.bind(null, "$eq", v => v, false),
+    mongoFormatOp: mongoFormatOp1.bind(null, "$eq", (v) => v, false),
     jsonLogic: "==",
     elasticSearchQueryType: "term",
   },
@@ -135,13 +186,22 @@ const operators = {
     spelOp: "!=",
     spelOps: ["!=", "ne"],
     reversedOp: "equal",
-    formatOp: (field, op, value, valueSrcs, valueTypes, opDef, operatorOptions, isForDisplay, fieldDef) => {
+    formatOp: (
+      field,
+      op,
+      value,
+      valueSrcs,
+      valueTypes,
+      opDef,
+      operatorOptions,
+      isForDisplay,
+      fieldDef
+    ) => {
       if (valueTypes == "boolean" && isForDisplay)
-        return value == "No" ? `${field}` : `NOT ${field}`;
-      else
-        return `${field} ${opDef.label} ${value}`;
+        return value == "No" ? `${field}` : `NOT ${field}`
+      else return `${field} ${opDef.label} ${value}`
     },
-    mongoFormatOp: mongoFormatOp1.bind(null, "$ne", v => v, false),
+    mongoFormatOp: mongoFormatOp1.bind(null, "$ne", (v) => v, false),
     jsonLogic: "!=",
   },
   less: {
@@ -151,7 +211,7 @@ const operators = {
     spelOp: "<",
     spelOps: ["<", "lt"],
     reversedOp: "greater_or_equal",
-    mongoFormatOp: mongoFormatOp1.bind(null, "$lt", v => v, false),
+    mongoFormatOp: mongoFormatOp1.bind(null, "$lt", (v) => v, false),
     jsonLogic: "<",
     elasticSearchQueryType: "range",
   },
@@ -162,7 +222,7 @@ const operators = {
     spelOp: "<=",
     spelOps: ["<=", "le"],
     reversedOp: "greater",
-    mongoFormatOp: mongoFormatOp1.bind(null, "$lte", v => v, false),
+    mongoFormatOp: mongoFormatOp1.bind(null, "$lte", (v) => v, false),
     jsonLogic: "<=",
     elasticSearchQueryType: "range",
   },
@@ -173,7 +233,7 @@ const operators = {
     spelOp: ">",
     spelOps: [">", "gt"],
     reversedOp: "less_or_equal",
-    mongoFormatOp: mongoFormatOp1.bind(null, "$gt", v => v, false),
+    mongoFormatOp: mongoFormatOp1.bind(null, "$gt", (v) => v, false),
     jsonLogic: ">",
     elasticSearchQueryType: "range",
   },
@@ -184,7 +244,7 @@ const operators = {
     spelOp: ">=",
     spelOps: [">=", "ge"],
     reversedOp: "less",
-    mongoFormatOp: mongoFormatOp1.bind(null, "$gte", v => v, false),
+    mongoFormatOp: mongoFormatOp1.bind(null, "$gte", (v) => v, false),
     jsonLogic: ">=",
     elasticSearchQueryType: "range",
   },
@@ -195,7 +255,12 @@ const operators = {
     sqlOp: "~*",
     spelOp: ".contains",
     spelOps: ["matches", ".contains"],
-    mongoFormatOp: mongoFormatOp1.bind(null, "$regex", v => (typeof v == "string" ? escapeRegExp(v) : undefined), false),
+    mongoFormatOp: mongoFormatOp1.bind(
+      null,
+      "$regex",
+      (v) => (typeof v == "string" ? escapeRegExp(v) : undefined),
+      false
+    ),
     //jsonLogic: (field, op, val) => ({ "in": [val, field] }),
     jsonLogic: "in",
     _jsonLogicIsRevArgs: true,
@@ -208,7 +273,12 @@ const operators = {
     reversedOp: "like",
     labelForFormat: "Not Contains",
     sqlOp: "!~*",
-    mongoFormatOp: mongoFormatOp1.bind(null, "$regex", v => (typeof v == "string" ? escapeRegExp(v) : undefined), true),
+    mongoFormatOp: mongoFormatOp1.bind(
+      null,
+      "$regex",
+      (v) => (typeof v == "string" ? escapeRegExp(v) : undefined),
+      true
+    ),
     valueSources: ["value"],
   },
   starts_with: {
@@ -217,7 +287,12 @@ const operators = {
     sqlOp: "~*",
     spelOp: ".startsWith",
     spelOps: ["matches", ".startsWith"],
-    mongoFormatOp: mongoFormatOp1.bind(null, "$regex", v => (typeof v == "string" ? "^" + escapeRegExp(v) : undefined), false),
+    mongoFormatOp: mongoFormatOp1.bind(
+      null,
+      "$regex",
+      (v) => (typeof v == "string" ? "^" + escapeRegExp(v) : undefined),
+      false
+    ),
     jsonLogic: undefined, // not supported
     valueSources: ["value"],
   },
@@ -227,7 +302,12 @@ const operators = {
     sqlOp: "~*",
     spelOp: ".endsWith",
     spelOps: ["matches", ".endsWith"],
-    mongoFormatOp: mongoFormatOp1.bind(null, "$regex", v => (typeof v == "string" ? escapeRegExp(v) + "$" : undefined), false),
+    mongoFormatOp: mongoFormatOp1.bind(
+      null,
+      "$regex",
+      (v) => (typeof v == "string" ? escapeRegExp(v) + "$" : undefined),
+      false
+    ),
     jsonLogic: undefined, // not supported
     valueSources: ["value"],
   },
@@ -236,38 +316,48 @@ const operators = {
     labelForFormat: "BETWEEN",
     sqlOp: "BETWEEN",
     cardinality: 2,
-    formatOp: (field, op, values, valueSrcs, valueTypes, opDef, operatorOptions, isForDisplay) => {
-      let valFrom = values.first();
-      let valTo = values.get(1);
-      if (isForDisplay)
-        return `${field} BETWEEN ${valFrom} AND ${valTo}`;
-      else
-        return `${field} >= ${valFrom} && ${field} <= ${valTo}`;
+    formatOp: (
+      field,
+      op,
+      values,
+      valueSrcs,
+      valueTypes,
+      opDef,
+      operatorOptions,
+      isForDisplay
+    ) => {
+      let valFrom = values.first()
+      let valTo = values.get(1)
+      if (isForDisplay) return `${field} BETWEEN ${valFrom} AND ${valTo}`
+      else return `${field} >= ${valFrom} && ${field} <= ${valTo}`
     },
-    spelFormatOp: (field, op, values, valueSrc, valueTypes, opDef, operatorOptions, fieldDef) => {
-      const valFrom = values[0];
-      const valTo = values[1];
-      return `${field} >= ${valFrom} && ${field} <= ${valTo}`;
+    spelFormatOp: (
+      field,
+      op,
+      values,
+      valueSrc,
+      valueTypes,
+      opDef,
+      operatorOptions,
+      fieldDef
+    ) => {
+      const valFrom = values[0]
+      const valTo = values[1]
+      return `${field} >= ${valFrom} && ${field} <= ${valTo}`
     },
     mongoFormatOp: mongoFormatOp2.bind(null, ["$gte", "$lte"], false),
-    valueLabels: [
-      "Value from",
-      "Value to"
-    ],
-    textSeparators: [
-      null,
-      "and"
-    ],
+    valueLabels: ["Value from", "Value to"],
+    textSeparators: [null, "and"],
     reversedOp: "not_between",
     jsonLogic: "<=",
     validateValues: (values) => {
       if (values[0] != undefined && values[1] != undefined) {
-        return values[0] <= values[1] ? null : "Invalid range";
+        return values[0] <= values[1] ? null : "Invalid range"
       }
-      return null;
+      return null
     },
     elasticSearchQueryType: function elasticSearchQueryType(type) {
-      return type === "time" ? "filter" : "range";
+      return type === "time" ? "filter" : "range"
     },
   },
   not_between: {
@@ -276,34 +366,44 @@ const operators = {
     labelForFormat: "NOT BETWEEN",
     sqlOp: "NOT BETWEEN",
     cardinality: 2,
-    formatOp: (field, op, values, valueSrcs, valueTypes, opDef, operatorOptions, isForDisplay) => {
-      let valFrom = values.first();
-      let valTo = values.get(1);
-      if (isForDisplay)
-        return `${field} NOT BETWEEN ${valFrom} AND ${valTo}`;
-      else
-        return `(${field} < ${valFrom} || ${field} > ${valTo})`;
+    formatOp: (
+      field,
+      op,
+      values,
+      valueSrcs,
+      valueTypes,
+      opDef,
+      operatorOptions,
+      isForDisplay
+    ) => {
+      let valFrom = values.first()
+      let valTo = values.get(1)
+      if (isForDisplay) return `${field} NOT BETWEEN ${valFrom} AND ${valTo}`
+      else return `(${field} < ${valFrom} || ${field} > ${valTo})`
     },
-    spelFormatOp: (field, op, values, valueSrc, valueTypes, opDef, operatorOptions, fieldDef) => {
-      const valFrom = values[0];
-      const valTo = values[1];
-      return `(${field} < ${valFrom} || ${field} > ${valTo})`;
+    spelFormatOp: (
+      field,
+      op,
+      values,
+      valueSrc,
+      valueTypes,
+      opDef,
+      operatorOptions,
+      fieldDef
+    ) => {
+      const valFrom = values[0]
+      const valTo = values[1]
+      return `(${field} < ${valFrom} || ${field} > ${valTo})`
     },
     mongoFormatOp: mongoFormatOp2.bind(null, ["$gte", "$lte"], true),
-    valueLabels: [
-      "Value from",
-      "Value to"
-    ],
-    textSeparators: [
-      null,
-      "and"
-    ],
+    valueLabels: ["Value from", "Value to"],
+    textSeparators: [null, "and"],
     reversedOp: "between",
     validateValues: (values) => {
       if (values[0] != undefined && values[1] != undefined) {
-        return values[0] <= values[1] ? null : "Invalid range";
+        return values[0] <= values[1] ? null : "Invalid range"
       }
-      return null;
+      return null
     },
   },
   is_empty: {
@@ -311,18 +411,50 @@ const operators = {
     labelForFormat: "IS EMPTY",
     cardinality: 0,
     reversedOp: "is_not_empty",
-    formatOp: (field, op, value, valueSrc, valueType, opDef, operatorOptions, isForDisplay) => {
-      return isForDisplay ? `${field} IS EMPTY` : `!${field}`;
+    formatOp: (
+      field,
+      op,
+      value,
+      valueSrc,
+      valueType,
+      opDef,
+      operatorOptions,
+      isForDisplay
+    ) => {
+      return isForDisplay ? `${field} IS EMPTY` : `!${field}`
     },
-    sqlFormatOp: (field, op, values, valueSrc, valueType, opDef, operatorOptions, fieldDef) => {
-      const empty = sqlEmptyValue(fieldDef);
-      return `COALESCE(${field}, ${empty}) = ${empty}`;
+    sqlFormatOp: (
+      field,
+      op,
+      values,
+      valueSrc,
+      valueType,
+      opDef,
+      operatorOptions,
+      fieldDef
+    ) => {
+      const empty = sqlEmptyValue(fieldDef)
+      return `COALESCE(${field}, ${empty}) = ${empty}`
     },
-    spelFormatOp: (field, op, values, valueSrc, valueTypes, opDef, operatorOptions, fieldDef) => {
+    spelFormatOp: (
+      field,
+      op,
+      values,
+      valueSrc,
+      valueTypes,
+      opDef,
+      operatorOptions,
+      fieldDef
+    ) => {
       //tip: is empty or null
-      return `${field} <= ''`;
+      return `${field} <= ''`
     },
-    mongoFormatOp: mongoFormatOp1.bind(null, "$in", (v, fieldDef) => [mongoEmptyValue(fieldDef), null], false),
+    mongoFormatOp: mongoFormatOp1.bind(
+      null,
+      "$in",
+      (v, fieldDef) => [mongoEmptyValue(fieldDef), null],
+      false
+    ),
     jsonLogic: "!",
   },
   is_not_empty: {
@@ -331,18 +463,50 @@ const operators = {
     labelForFormat: "IS NOT EMPTY",
     cardinality: 0,
     reversedOp: "is_empty",
-    formatOp: (field, op, value, valueSrc, valueType, opDef, operatorOptions, isForDisplay) => {
-      return isForDisplay ? `${field} IS NOT EMPTY` : `!!${field}`;
+    formatOp: (
+      field,
+      op,
+      value,
+      valueSrc,
+      valueType,
+      opDef,
+      operatorOptions,
+      isForDisplay
+    ) => {
+      return isForDisplay ? `${field} IS NOT EMPTY` : `!!${field}`
     },
-    sqlFormatOp: (field, op, values, valueSrc, valueType, opDef, operatorOptions, fieldDef) => {
-      const empty = sqlEmptyValue(fieldDef);
-      return `COALESCE(${field}, ${empty}) <> ${empty}`;
+    sqlFormatOp: (
+      field,
+      op,
+      values,
+      valueSrc,
+      valueType,
+      opDef,
+      operatorOptions,
+      fieldDef
+    ) => {
+      const empty = sqlEmptyValue(fieldDef)
+      return `COALESCE(${field}, ${empty}) <> ${empty}`
     },
-    spelFormatOp: (field, op, values, valueSrc, valueTypes, opDef, operatorOptions, fieldDef) => {
+    spelFormatOp: (
+      field,
+      op,
+      values,
+      valueSrc,
+      valueTypes,
+      opDef,
+      operatorOptions,
+      fieldDef
+    ) => {
       //tip: is not empty and not null
-      return `${field} > ''`;
+      return `${field} > ''`
     },
-    mongoFormatOp: mongoFormatOp1.bind(null, "$nin", (v, fieldDef) => [mongoEmptyValue(fieldDef), null], false),
+    mongoFormatOp: mongoFormatOp1.bind(
+      null,
+      "$nin",
+      (v, fieldDef) => [mongoEmptyValue(fieldDef), null],
+      false
+    ),
     jsonLogic: "!!",
     elasticSearchQueryType: "exists",
   },
@@ -352,14 +516,32 @@ const operators = {
     sqlOp: "IS NULL",
     cardinality: 0,
     reversedOp: "is_not_null",
-    formatOp: (field, op, value, valueSrc, valueType, opDef, operatorOptions, isForDisplay) => {
-      return isForDisplay ? `${field} IS NULL` : `!${field}`;
+    formatOp: (
+      field,
+      op,
+      value,
+      valueSrc,
+      valueType,
+      opDef,
+      operatorOptions,
+      isForDisplay
+    ) => {
+      return isForDisplay ? `${field} IS NULL` : `!${field}`
     },
-    spelFormatOp: (field, op, values, valueSrc, valueTypes, opDef, operatorOptions, fieldDef) => {
-      return `${field} == null`;
+    spelFormatOp: (
+      field,
+      op,
+      values,
+      valueSrc,
+      valueTypes,
+      opDef,
+      operatorOptions,
+      fieldDef
+    ) => {
+      return `${field} == null`
     },
     // check if value is null OR not exists
-    mongoFormatOp: mongoFormatOp1.bind(null, "$eq", v => null, false),
+    mongoFormatOp: mongoFormatOp1.bind(null, "$eq", (v) => null, false),
     jsonLogic: "==",
   },
   is_not_null: {
@@ -368,14 +550,32 @@ const operators = {
     sqlOp: "IS NOT NULL",
     cardinality: 0,
     reversedOp: "is_null",
-    formatOp: (field, op, value, valueSrc, valueType, opDef, operatorOptions, isForDisplay) => {
-      return isForDisplay ? `${field} IS NOT NULL` : `!!${field}`;
+    formatOp: (
+      field,
+      op,
+      value,
+      valueSrc,
+      valueType,
+      opDef,
+      operatorOptions,
+      isForDisplay
+    ) => {
+      return isForDisplay ? `${field} IS NOT NULL` : `!!${field}`
     },
-    spelFormatOp: (field, op, values, valueSrc, valueTypes, opDef, operatorOptions, fieldDef) => {
-      return `${field} != null`;
+    spelFormatOp: (
+      field,
+      op,
+      values,
+      valueSrc,
+      valueTypes,
+      opDef,
+      operatorOptions,
+      fieldDef
+    ) => {
+      return `${field} != null`
     },
     // check if value exists and is not null
-    mongoFormatOp: mongoFormatOp1.bind(null, "$ne", v => null, false),
+    mongoFormatOp: mongoFormatOp1.bind(null, "$ne", (v) => null, false),
     jsonLogic: "!=",
     elasticSearchQueryType: "exists",
   },
@@ -383,13 +583,22 @@ const operators = {
     label: "==",
     labelForFormat: "==",
     sqlOp: "=", // enum/set
-    formatOp: (field, op, value, valueSrc, valueType, opDef, operatorOptions, isForDisplay) => {
-      const opStr = isForDisplay ? "=" : "==";
-      return `${field} ${opStr} ${value}`;
+    formatOp: (
+      field,
+      op,
+      value,
+      valueSrc,
+      valueType,
+      opDef,
+      operatorOptions,
+      isForDisplay
+    ) => {
+      const opStr = isForDisplay ? "=" : "=="
+      return `${field} ${opStr} ${value}`
     },
     spelOp: "==",
     spelOps: ["==", "eq"],
-    mongoFormatOp: mongoFormatOp1.bind(null, "$eq", v => v, false),
+    mongoFormatOp: mongoFormatOp1.bind(null, "$eq", (v) => v, false),
     reversedOp: "select_not_equals",
     jsonLogic: "==",
     elasticSearchQueryType: "term",
@@ -399,12 +608,21 @@ const operators = {
     label: "!=",
     labelForFormat: "!=",
     sqlOp: "<>", // enum/set
-    formatOp: (field, op, value, valueSrc, valueType, opDef, operatorOptions, isForDisplay) => {
-      return `${field} != ${value}`;
+    formatOp: (
+      field,
+      op,
+      value,
+      valueSrc,
+      valueType,
+      opDef,
+      operatorOptions,
+      isForDisplay
+    ) => {
+      return `${field} != ${value}`
     },
     spelOp: "!=",
     spelOps: ["!=", "ne"],
-    mongoFormatOp: mongoFormatOp1.bind(null, "$ne", v => v, false),
+    mongoFormatOp: mongoFormatOp1.bind(null, "$ne", (v) => v, false),
     reversedOp: "select_equals",
     jsonLogic: "!=",
   },
@@ -412,55 +630,102 @@ const operators = {
     label: "Contains any in",
     labelForFormat: "Contains any in",
     reversedOp: "contains_none_in",
-    sqlFormatOp: (field, op, values, valueSrc, valueType, opDef, operatorOptions, fieldDef) => {
+    sqlFormatOp: (
+      field,
+      op,
+      values,
+      valueSrc,
+      valueType,
+      opDef,
+      operatorOptions,
+      fieldDef
+    ) => {
       if (valueSrc == "value") {
-        return `${field} ~* (${values.map(v => `(${v})`).join("|")})`;
+        return `${field} ~* (${values.map((v) => `(${v})`).join("|")})`
       } else {
-        return undefined; // not supported
+        return undefined // not supported
       }
-    }
+    },
   },
   contains_none_in: {
     isNotOp: true,
     label: "Contains none in",
     labelForFormat: "Contains none in",
-    sqlFormatOp: (field, op, values, valueSrc, valueType, opDef, operatorOptions, fieldDef) => {
+    sqlFormatOp: (
+      field,
+      op,
+      values,
+      valueSrc,
+      valueType,
+      opDef,
+      operatorOptions,
+      fieldDef
+    ) => {
       if (valueSrc == "value") {
-        return `${field} !~* (${values.map(v => `(${SqlString.trim(v)})`).join("")})`;
+        return `${field} !~* (${values
+          .map((v) => `(${SqlString.trim(v)})`)
+          .join("")})`
       } else {
-        return undefined; // not supported
+        return undefined // not supported
       }
-    }
+    },
   },
   contains_all_in: {
     label: "Contains all in",
     labelForFormat: "Contains all in",
     reversedOp: "contains_none_in",
-    sqlFormatOp: (field, op, values, valueSrc, valueType, opDef, operatorOptions, fieldDef) => {
+    sqlFormatOp: (
+      field,
+      op,
+      values,
+      valueSrc,
+      valueType,
+      opDef,
+      operatorOptions,
+      fieldDef
+    ) => {
       if (valueSrc == "value") {
-        return `${field} ~* (${values.map(v => `(${SqlString.trim(v)})`).join("")})`;
+        return `${field} ~* (${values
+          .map((v) => `(${SqlString.trim(v)})`)
+          .join("")})`
       } else {
-        return undefined; // not supported
+        return undefined // not supported
       }
-    }
+    },
   },
   select_any_in: {
     label: "Any in",
     labelForFormat: "IN",
     sqlOp: "IN",
-    formatOp: (field, op, values, valueSrc, valueType, opDef, operatorOptions, isForDisplay) => {
-      if (valueSrc == "value")
-        return `${field} IN (${values.join(", ")})`;
-      else
-        return `${field} IN (${values})`;
+    formatOp: (
+      field,
+      op,
+      values,
+      valueSrc,
+      valueType,
+      opDef,
+      operatorOptions,
+      isForDisplay
+    ) => {
+      if (valueSrc == "value") return `${field} IN (${values.join(", ")})`
+      else return `${field} IN (${values})`
     },
-    sqlFormatOp: (field, op, values, valueSrc, valueType, opDef, operatorOptions, fieldDef) => {
+    sqlFormatOp: (
+      field,
+      op,
+      values,
+      valueSrc,
+      valueType,
+      opDef,
+      operatorOptions,
+      fieldDef
+    ) => {
       if (valueSrc == "value") {
-        return `${field} IN (${values.join(", ")})`;
-      } else return undefined; // not supported
+        return `${field} IN (${values.join(", ")})`
+      } else return undefined // not supported
     },
     spelOp: "$contains", // tip: $ means first arg is object
-    mongoFormatOp: mongoFormatOp1.bind(null, "$in", v => v, false),
+    mongoFormatOp: mongoFormatOp1.bind(null, "$in", (v) => v, false),
     reversedOp: "select_not_any_in",
     jsonLogic: "in",
     elasticSearchQueryType: "term",
@@ -470,18 +735,34 @@ const operators = {
     label: "Not in",
     labelForFormat: "NOT IN",
     sqlOp: "NOT IN",
-    formatOp: (field, op, values, valueSrc, valueType, opDef, operatorOptions, isForDisplay) => {
-      if (valueSrc == "value")
-        return `${field} NOT IN (${values.join(", ")})`;
-      else
-        return `${field} NOT IN (${values})`;
+    formatOp: (
+      field,
+      op,
+      values,
+      valueSrc,
+      valueType,
+      opDef,
+      operatorOptions,
+      isForDisplay
+    ) => {
+      if (valueSrc == "value") return `${field} NOT IN (${values.join(", ")})`
+      else return `${field} NOT IN (${values})`
     },
-    sqlFormatOp: (field, op, values, valueSrc, valueType, opDef, operatorOptions, fieldDef) => {
+    sqlFormatOp: (
+      field,
+      op,
+      values,
+      valueSrc,
+      valueType,
+      opDef,
+      operatorOptions,
+      fieldDef
+    ) => {
       if (valueSrc == "value") {
-        return `${field} NOT IN (${values.join(", ")})`;
-      } else return undefined; // not supported
+        return `${field} NOT IN (${values.join(", ")})`
+      } else return undefined // not supported
     },
-    mongoFormatOp: mongoFormatOp1.bind(null, "$nin", v => v, false),
+    mongoFormatOp: mongoFormatOp1.bind(null, "$nin", (v) => v, false),
     reversedOp: "select_any_in",
   },
   //todo: multiselect_contains - for SpEL it would be `.containsAll`
@@ -489,27 +770,42 @@ const operators = {
     label: "Equals",
     labelForFormat: "==",
     sqlOp: "=",
-    formatOp: (field, op, values, valueSrc, valueType, opDef, operatorOptions, isForDisplay) => {
-      const opStr = isForDisplay ? "=" : "==";
-      if (valueSrc == "value")
-        return `${field} ${opStr} [${values.join(", ")}]`;
-      else
-        return `${field} ${opStr} ${values}`;
+    formatOp: (
+      field,
+      op,
+      values,
+      valueSrc,
+      valueType,
+      opDef,
+      operatorOptions,
+      isForDisplay
+    ) => {
+      const opStr = isForDisplay ? "=" : "=="
+      if (valueSrc == "value") return `${field} ${opStr} [${values.join(", ")}]`
+      else return `${field} ${opStr} ${values}`
     },
-    sqlFormatOp: (field, op, values, valueSrc, valueType, opDef, operatorOptions, fieldDef) => {
+    sqlFormatOp: (
+      field,
+      op,
+      values,
+      valueSrc,
+      valueType,
+      opDef,
+      operatorOptions,
+      fieldDef
+    ) => {
       if (valueSrc == "value")
         // set
-        return `${field} = '${values.map(v => SqlString.trim(v)).join(",")}'`;
-      else
-        return undefined; //not supported
+        return `${field} = '${values.map((v) => SqlString.trim(v)).join(",")}'`
+      else return undefined //not supported
     },
     spelOp: ".equals",
-    mongoFormatOp: mongoFormatOp1.bind(null, "$eq", v => v, false),
+    mongoFormatOp: mongoFormatOp1.bind(null, "$eq", (v) => v, false),
     reversedOp: "multiselect_not_equals",
     jsonLogic2: "all-in",
     jsonLogic: (field, op, vals) => ({
       // it's not "equals", but "includes" operator - just for example
-      "all": [field, { "in": [{ "var": "" }, vals] }]
+      all: [field, { in: [{ var: "" }, vals] }],
     }),
     elasticSearchQueryType: "term",
   },
@@ -518,20 +814,35 @@ const operators = {
     label: "Not equals",
     labelForFormat: "!=",
     sqlOp: "<>",
-    formatOp: (field, op, values, valueSrc, valueType, opDef, operatorOptions, isForDisplay) => {
-      if (valueSrc == "value")
-        return `${field} != [${values.join(", ")}]`;
-      else
-        return `${field} != ${values}`;
+    formatOp: (
+      field,
+      op,
+      values,
+      valueSrc,
+      valueType,
+      opDef,
+      operatorOptions,
+      isForDisplay
+    ) => {
+      if (valueSrc == "value") return `${field} != [${values.join(", ")}]`
+      else return `${field} != ${values}`
     },
-    sqlFormatOp: (field, op, values, valueSrc, valueType, opDef, operatorOptions, fieldDef) => {
+    sqlFormatOp: (
+      field,
+      op,
+      values,
+      valueSrc,
+      valueType,
+      opDef,
+      operatorOptions,
+      fieldDef
+    ) => {
       if (valueSrc == "value")
         // set
-        return `${field} != '${values.map(v => SqlString.trim(v)).join(",")}'`;
-      else
-        return undefined; //not supported
+        return `${field} != '${values.map((v) => SqlString.trim(v)).join(",")}'`
+      else return undefined //not supported
     },
-    mongoFormatOp: mongoFormatOp1.bind(null, "$ne", v => v, false),
+    mongoFormatOp: mongoFormatOp1.bind(null, "$ne", (v) => v, false),
     reversedOp: "multiselect_equals",
   },
   proximity: {
@@ -545,19 +856,37 @@ const operators = {
       //'Word 1',
       //'Word 2'
     ],
-    formatOp: (field, op, values, valueSrc, valueType, opDef, operatorOptions, isForDisplay) => {
-      const val1 = values.first();
-      const val2 = values.get(1);
-      const prox = operatorOptions.get("proximity");
-      return `${field} ${val1} NEAR/${prox} ${val2}`;
+    formatOp: (
+      field,
+      op,
+      values,
+      valueSrc,
+      valueType,
+      opDef,
+      operatorOptions,
+      isForDisplay
+    ) => {
+      const val1 = values.first()
+      const val2 = values.get(1)
+      const prox = operatorOptions.get("proximity")
+      return `${field} ${val1} NEAR/${prox} ${val2}`
     },
-    sqlFormatOp: (field, op, values, valueSrc, valueType, opDef, operatorOptions, fieldDef) => {
-      const val1 = values.first();
-      const val2 = values.get(1);
-      const aVal1 = SqlString.trim(val1);
-      const aVal2 = SqlString.trim(val2);
-      const prox = operatorOptions.get("proximity");
-      return `CONTAINS(${field}, 'NEAR((${aVal1}, ${aVal2}), ${prox})')`;
+    sqlFormatOp: (
+      field,
+      op,
+      values,
+      valueSrc,
+      valueType,
+      opDef,
+      operatorOptions,
+      fieldDef
+    ) => {
+      const val1 = values.first()
+      const val2 = values.get(1)
+      const aVal1 = SqlString.trim(val1)
+      const aVal2 = SqlString.trim(val2)
+      const prox = operatorOptions.get("proximity")
+      return `CONTAINS(${field}, 'NEAR((${aVal1}, ${aVal2}), ${prox})')`
     },
     mongoFormatOp: undefined, // not supported
     jsonLogic: undefined, // not supported
@@ -568,7 +897,7 @@ const operators = {
       minProximity: 2,
       maxProximity: 10,
       defaults: {
-        proximity: 2
+        proximity: 2,
       },
     },
   },
@@ -578,15 +907,16 @@ const operators = {
     cardinality: 0,
     jsonLogic: "some",
     spelFormatOp: (filteredSize) => `${filteredSize} > 0`,
-    mongoFormatOp: mongoFormatOp1.bind(null, "$gt", v => 0, false),
+    mongoFormatOp: mongoFormatOp1.bind(null, "$gt", (v) => 0, false),
   },
   all: {
     label: "All",
     labelForFormat: "ALL",
     cardinality: 0,
     jsonLogic: "all",
-    spelFormatOp: (filteredSize, op, fullSize) => `${filteredSize} == ${fullSize}`,
-    mongoFormatOp: mongoFormatOp1.bind(null, "$eq", v => v, false),
+    spelFormatOp: (filteredSize, op, fullSize) =>
+      `${filteredSize} == ${fullSize}`,
+    mongoFormatOp: mongoFormatOp1.bind(null, "$eq", (v) => v, false),
   },
   none: {
     label: "None",
@@ -594,14 +924,13 @@ const operators = {
     cardinality: 0,
     jsonLogic: "none",
     spelFormatOp: (filteredSize) => `${filteredSize} == 0`,
-    mongoFormatOp: mongoFormatOp1.bind(null, "$eq", v => 0, false),
-  }
-};
-
+    mongoFormatOp: mongoFormatOp1.bind(null, "$eq", (v) => 0, false),
+  },
+}
 
 //----------------------------  widgets
 
-export const stringifyForDisplay = (v) => (v == null ? "NULL" : v.toString());
+export const stringifyForDisplay = (v) => (v == null ? "NULL" : v.toString())
 
 const widgets = {
   text: {
@@ -611,32 +940,33 @@ const widgets = {
     valueLabel: "String",
     valuePlaceholder: "Enter string",
     formatValue: (val, fieldDef, wgtDef, isForDisplay) => {
-      return isForDisplay ? stringifyForDisplay(val) : JSON.stringify(val);
+      return isForDisplay ? stringifyForDisplay(val) : JSON.stringify(val)
     },
     spelFormatValue: (val, fieldDef, wgtDef, op, opDef) => {
       if (opDef.spelOp == "matches" && op != "regex") {
-        let regex;
+        let regex
         if (op == "starts_with") {
-          regex = `(?s)^${escapeRegExp(val)}.*`;
+          regex = `(?s)^${escapeRegExp(val)}.*`
         } else if (op == "ends_with") {
-          regex = `(?s).*${escapeRegExp(val)}$`;
-        } else { // op == 'like'
-          regex = `(?s).*${escapeRegExp(val)}.*`; //tip: can use (?sui) for case-insensitive
+          regex = `(?s).*${escapeRegExp(val)}$`
+        } else {
+          // op == 'like'
+          regex = `(?s).*${escapeRegExp(val)}.*` //tip: can use (?sui) for case-insensitive
         }
-        return spelEscape(regex);
+        return spelEscape(regex)
       } else {
-        return spelEscape(val);
+        return spelEscape(val)
       }
     },
     sqlFormatValue: (val, fieldDef, wgtDef, op, opDef) => {
       if (opDef.sqlOp == "~*" || opDef.sqlOp == "!~*") {
-        return SqlString.escapeLike(val, op != "starts_with", op != "ends_with");
+        return SqlString.escapeLike(val, op != "starts_with", op != "ends_with")
       } else {
-        return SqlString.escape(val);
+        return SqlString.escape(val)
       }
     },
-    toJS: (val, fieldSettings) => (val),
-    mongoFormatValue: (val, fieldDef, wgtDef) => (val),
+    toJS: (val, fieldSettings) => val,
+    mongoFormatValue: (val, fieldDef, wgtDef) => val,
   },
   textarea: {
     type: "text",
@@ -646,18 +976,18 @@ const widgets = {
     valuePlaceholder: "Enter text",
 
     formatValue: (val, fieldDef, wgtDef, isForDisplay) => {
-      return isForDisplay ? stringifyForDisplay(val) : JSON.stringify(val);
+      return isForDisplay ? stringifyForDisplay(val) : JSON.stringify(val)
     },
     sqlFormatValue: (val, fieldDef, wgtDef, op, opDef) => {
       if (opDef.sqlOp == "~*" || opDef.sqlOp == "!~*") {
-        return SqlString.escapeLike(val, op != "starts_with", op != "ends_with");
+        return SqlString.escapeLike(val, op != "starts_with", op != "ends_with")
       } else {
-        return SqlString.escape(val);
+        return SqlString.escape(val)
       }
     },
     spelFormatValue: (val) => spelEscape(val),
-    toJS: (val, fieldSettings) => (val),
-    mongoFormatValue: (val, fieldDef, wgtDef) => (val),
+    toJS: (val, fieldSettings) => val,
+    mongoFormatValue: (val, fieldDef, wgtDef) => val,
     fullWidth: true,
   },
   number: {
@@ -671,17 +1001,17 @@ const widgets = {
       { label: "Number to", placeholder: "Enter number to" },
     ],
     formatValue: (val, fieldDef, wgtDef, isForDisplay) => {
-      return isForDisplay ? stringifyForDisplay(val) : JSON.stringify(val);
+      return isForDisplay ? stringifyForDisplay(val) : JSON.stringify(val)
     },
     sqlFormatValue: (val, fieldDef, wgtDef, op, opDef) => {
-      return SqlString.escape(val);
+      return SqlString.escape(val)
     },
     spelFormatValue: (val, fieldDef, wgtDef) => {
-      const isFloat = wgtDef.step && !Number.isInteger(wgtDef.step);
-      return spelEscape(val, isFloat);
+      const isFloat = wgtDef.step && !Number.isInteger(wgtDef.step)
+      return spelEscape(val, isFloat)
     },
-    toJS: (val, fieldSettings) => (val),
-    mongoFormatValue: (val, fieldDef, wgtDef) => (val),
+    toJS: (val, fieldSettings) => val,
+    mongoFormatValue: (val, fieldDef, wgtDef) => val,
   },
   slider: {
     type: "number",
@@ -690,14 +1020,14 @@ const widgets = {
     valueLabel: "Number",
     valuePlaceholder: "Enter number or move slider",
     formatValue: (val, fieldDef, wgtDef, isForDisplay) => {
-      return isForDisplay ? stringifyForDisplay(val) : JSON.stringify(val);
+      return isForDisplay ? stringifyForDisplay(val) : JSON.stringify(val)
     },
     sqlFormatValue: (val, fieldDef, wgtDef, op, opDef) => {
-      return SqlString.escape(val);
+      return SqlString.escape(val)
     },
     spelFormatValue: (val) => spelEscape(val),
-    toJS: (val, fieldSettings) => (val),
-    mongoFormatValue: (val, fieldDef, wgtDef) => (val),
+    toJS: (val, fieldSettings) => val,
+    mongoFormatValue: (val, fieldDef, wgtDef) => val,
   },
   select: {
     type: "select",
@@ -706,15 +1036,18 @@ const widgets = {
     valueLabel: "Value",
     valuePlaceholder: "Select value",
     formatValue: (val, fieldDef, wgtDef, isForDisplay) => {
-      let valLabel = getTitleInListValues(fieldDef.fieldSettings.listValues || fieldDef.asyncListValues, val);
-      return isForDisplay ? stringifyForDisplay(valLabel) : JSON.stringify(val);
+      let valLabel = getTitleInListValues(
+        fieldDef.fieldSettings.listValues || fieldDef.asyncListValues,
+        val
+      )
+      return isForDisplay ? stringifyForDisplay(valLabel) : JSON.stringify(val)
     },
     sqlFormatValue: (val, fieldDef, wgtDef, op, opDef) => {
-      return SqlString.escape(val);
+      return SqlString.escape(val)
     },
     spelFormatValue: (val) => spelEscape(val),
-    toJS: (val, fieldSettings) => (val),
-    mongoFormatValue: (val, fieldDef, wgtDef) => (val),
+    toJS: (val, fieldSettings) => val,
+    mongoFormatValue: (val, fieldDef, wgtDef) => val,
   },
   multiselect: {
     type: "multiselect",
@@ -723,24 +1056,31 @@ const widgets = {
     valueLabel: "Values",
     valuePlaceholder: "Select values",
     formatValue: (vals, fieldDef, wgtDef, isForDisplay) => {
-      let valsLabels = vals.map(v => getTitleInListValues(fieldDef.fieldSettings.listValues || fieldDef.asyncListValues, v));
-      return isForDisplay ? valsLabels.map(stringifyForDisplay) : vals.map(JSON.stringify);
+      let valsLabels = vals.map((v) =>
+        getTitleInListValues(
+          fieldDef.fieldSettings.listValues || fieldDef.asyncListValues,
+          v
+        )
+      )
+      return isForDisplay
+        ? valsLabels.map(stringifyForDisplay)
+        : vals.map(JSON.stringify)
     },
     sqlFormatValue: (vals, fieldDef, wgtDef, op, opDef) => {
-      return vals.map(v => SqlString.escape(v));
+      return vals.map((v) => SqlString.escape(v))
     },
     spelFormatValue: (vals, fieldDef, wgtDef, op, opDef) => {
-      const isCallable = opDef.spelOp && opDef.spelOp[0] == "$";
-      let res = spelEscape(vals); // inline list
+      const isCallable = opDef.spelOp && opDef.spelOp[0] == "$"
+      let res = spelEscape(vals) // inline list
       if (isCallable) {
         // `{1,2}.contains(1)` NOT works
         // `{1,2}.?[true].contains(1)` works
-        res = spelFixList(res);
+        res = spelFixList(res)
       }
-      return res;
+      return res
     },
-    toJS: (val, fieldSettings) => (val),
-    mongoFormatValue: (val, fieldDef, wgtDef) => (val),
+    toJS: (val, fieldSettings) => val,
+    mongoFormatValue: (val, fieldDef, wgtDef) => val,
   },
   date: {
     type: "date",
@@ -757,26 +1097,31 @@ const widgets = {
       { label: "Date to", placeholder: "Enter date to" },
     ],
     formatValue: (val, fieldDef, wgtDef, isForDisplay) => {
-      const dateVal = moment(val, wgtDef.valueFormat);
-      return isForDisplay ? dateVal.format(wgtDef.dateFormat) : JSON.stringify(val);
+      const dateVal = moment(val, wgtDef.valueFormat)
+      return isForDisplay
+        ? dateVal.format(wgtDef.dateFormat)
+        : JSON.stringify(val)
     },
     sqlFormatValue: (val, fieldDef, wgtDef, op, opDef) => {
-      const dateVal = moment(val, wgtDef.valueFormat);
-      return SqlString.escape(dateVal.format("YYYY-MM-DD"));
+      const dateVal = moment(val, wgtDef.valueFormat)
+      return SqlString.escape(dateVal.format("YYYY-MM-DD"))
     },
     spelFormatValue: (val, fieldDef, wgtDef, op, opDef) => {
-      const dateVal = moment(val, wgtDef.valueFormat);
-      return `new java.text.SimpleDateFormat('yyyy-MM-dd').parse('${dateVal.format("YYYY-MM-DD")}')`;
+      const dateVal = moment(val, wgtDef.valueFormat)
+      return `new java.text.SimpleDateFormat('yyyy-MM-dd').parse('${dateVal.format(
+        "YYYY-MM-DD"
+      )}')`
     },
-    jsonLogic: (val, fieldDef, wgtDef) => moment(val, wgtDef.valueFormat).toDate(),
+    jsonLogic: (val, fieldDef, wgtDef) =>
+      moment(val, wgtDef.valueFormat).toDate(),
     toJS: (val, fieldSettings) => {
-      const dateVal = moment(val, fieldSettings.valueFormat);
-      return dateVal.isValid() ? dateVal.toDate() : undefined;
+      const dateVal = moment(val, fieldSettings.valueFormat)
+      return dateVal.isValid() ? dateVal.toDate() : undefined
     },
     mongoFormatValue: (val, fieldDef, wgtDef) => {
-      const dateVal = moment(val, wgtDef.valueFormat);
-      return dateVal.isValid() ? dateVal.toDate() : undefined;
-    }
+      const dateVal = moment(val, wgtDef.valueFormat)
+      return dateVal.isValid() ? dateVal.toDate() : undefined
+    },
   },
   time: {
     type: "time",
@@ -794,45 +1139,66 @@ const widgets = {
       { label: "Time to", placeholder: "Enter time to" },
     ],
     formatValue: (val, fieldDef, wgtDef, isForDisplay) => {
-      const dateVal = moment(val, wgtDef.valueFormat);
-      return isForDisplay ? dateVal.format(wgtDef.timeFormat) : JSON.stringify(val);
+      const dateVal = moment(val, wgtDef.valueFormat)
+      return isForDisplay
+        ? dateVal.format(wgtDef.timeFormat)
+        : JSON.stringify(val)
     },
     sqlFormatValue: (val, fieldDef, wgtDef, op, opDef) => {
-      const dateVal = moment(val, wgtDef.valueFormat);
-      return SqlString.escape(dateVal.format("HH:mm:ss"));
+      const dateVal = moment(val, wgtDef.valueFormat)
+      return SqlString.escape(dateVal.format("HH:mm:ss"))
     },
     spelFormatValue: (val, fieldDef, wgtDef, op, opDef) => {
-      const dateVal = moment(val, wgtDef.valueFormat);
-      return `T(java.time.LocalTime).parse('${dateVal.format("HH:mm:ss")}')`;
+      const dateVal = moment(val, wgtDef.valueFormat)
+      return `T(java.time.LocalTime).parse('${dateVal.format("HH:mm:ss")}')`
       //return `new java.text.SimpleDateFormat('HH:mm:ss').parse('${dateVal.format("HH:mm:ss")}')`;
     },
     jsonLogic: (val, fieldDef, wgtDef) => {
       // return seconds of day
-      const dateVal = moment(val, wgtDef.valueFormat);
-      return dateVal.get("hour") * 60 * 60 + dateVal.get("minute") * 60 + dateVal.get("second");
+      const dateVal = moment(val, wgtDef.valueFormat)
+      return (
+        dateVal.get("hour") * 60 * 60 +
+        dateVal.get("minute") * 60 +
+        dateVal.get("second")
+      )
     },
     toJS: (val, fieldSettings) => {
       // return seconds of day
-      const dateVal = moment(val, fieldSettings.valueFormat);
-      return dateVal.isValid() ? dateVal.get("hour") * 60 * 60 + dateVal.get("minute") * 60 + dateVal.get("second") : undefined;
+      const dateVal = moment(val, fieldSettings.valueFormat)
+      return dateVal.isValid()
+        ? dateVal.get("hour") * 60 * 60 +
+            dateVal.get("minute") * 60 +
+            dateVal.get("second")
+        : undefined
     },
     mongoFormatValue: (val, fieldDef, wgtDef) => {
       // return seconds of day
-      const dateVal = moment(val, wgtDef.valueFormat);
-      return dateVal.get("hour") * 60 * 60 + dateVal.get("minute") * 60 + dateVal.get("second");
+      const dateVal = moment(val, wgtDef.valueFormat)
+      return (
+        dateVal.get("hour") * 60 * 60 +
+        dateVal.get("minute") * 60 +
+        dateVal.get("second")
+      )
     },
-    elasticSearchFormatValue: function elasticSearchFormatValue(queryType, value, operator, fieldName) {
+    elasticSearchFormatValue: function elasticSearchFormatValue(
+      queryType,
+      value,
+      operator,
+      fieldName
+    ) {
       return {
         script: {
           script: {
-            source: "doc[".concat(fieldName, "][0].getHour() >== params.min && doc[").concat(fieldName, "][0].getHour() <== params.max"),
+            source: "doc["
+              .concat(fieldName, "][0].getHour() >== params.min && doc[")
+              .concat(fieldName, "][0].getHour() <== params.max"),
             params: {
               min: value[0],
-              max: value[1]
-            }
-          }
-        }
-      };
+              max: value[1],
+            },
+          },
+        },
+      }
     },
   },
   datetime: {
@@ -851,26 +1217,31 @@ const widgets = {
       { label: "Datetime to", placeholder: "Enter datetime to" },
     ],
     formatValue: (val, fieldDef, wgtDef, isForDisplay) => {
-      const dateVal = moment(val, wgtDef.valueFormat);
-      return isForDisplay ? dateVal.format(wgtDef.dateFormat + " " + wgtDef.timeFormat) : JSON.stringify(val);
+      const dateVal = moment(val, wgtDef.valueFormat)
+      return isForDisplay
+        ? dateVal.format(wgtDef.dateFormat + " " + wgtDef.timeFormat)
+        : JSON.stringify(val)
     },
     sqlFormatValue: (val, fieldDef, wgtDef, op, opDef) => {
-      const dateVal = moment(val, wgtDef.valueFormat);
-      return SqlString.escape(dateVal.toDate());
+      const dateVal = moment(val, wgtDef.valueFormat)
+      return SqlString.escape(dateVal.toDate())
     },
     spelFormatValue: (val, fieldDef, wgtDef, op, opDef) => {
-      const dateVal = moment(val, wgtDef.valueFormat);
-      return `new java.text.SimpleDateFormat('yyyy-MM-dd HH:mm:ss').parse('${dateVal.format("YYYY-MM-DD HH:mm:ss")}')`;
+      const dateVal = moment(val, wgtDef.valueFormat)
+      return `new java.text.SimpleDateFormat('yyyy-MM-dd HH:mm:ss').parse('${dateVal.format(
+        "YYYY-MM-DD HH:mm:ss"
+      )}')`
     },
-    jsonLogic: (val, fieldDef, wgtDef) => moment(val, wgtDef.valueFormat).toDate(),
+    jsonLogic: (val, fieldDef, wgtDef) =>
+      moment(val, wgtDef.valueFormat).toDate(),
     toJS: (val, fieldSettings) => {
-      const dateVal = moment(val, fieldSettings.valueFormat);
-      return dateVal.isValid() ? dateVal.toDate() : undefined;
+      const dateVal = moment(val, fieldSettings.valueFormat)
+      return dateVal.isValid() ? dateVal.toDate() : undefined
     },
     mongoFormatValue: (val, fieldDef, wgtDef) => {
-      const dateVal = moment(val, wgtDef.valueFormat);
-      return dateVal.isValid() ? dateVal.toDate() : undefined;
-    }
+      const dateVal = moment(val, wgtDef.valueFormat)
+      return dateVal.isValid() ? dateVal.toDate() : undefined
+    },
   },
   boolean: {
     type: "boolean",
@@ -880,35 +1251,43 @@ const widgets = {
     labelYes: "Yes",
     labelNo: "No",
     formatValue: (val, fieldDef, wgtDef, isForDisplay) => {
-      return isForDisplay ? (val ? "Yes" : "No") : JSON.stringify(!!val);
+      return isForDisplay ? (val ? "Yes" : "No") : JSON.stringify(!!val)
     },
     sqlFormatValue: (val, fieldDef, wgtDef, op, opDef) => {
-      return SqlString.escape(val);
+      return SqlString.escape(val)
     },
     spelFormatValue: (val, fieldDef, wgtDef, op, opDef) => {
-      return spelEscape(val);
+      return spelEscape(val)
     },
     defaultValue: false,
-    toJS: (val, fieldSettings) => (val),
-    mongoFormatValue: (val, fieldDef, wgtDef) => (val),
+    toJS: (val, fieldSettings) => val,
+    mongoFormatValue: (val, fieldDef, wgtDef) => val,
   },
   field: {
     valueSrc: "field",
 
-    formatValue: (val, fieldDef, wgtDef, isForDisplay, op, opDef, rightFieldDef) => {
-      return isForDisplay ? (rightFieldDef.label || val) : val;
+    formatValue: (
+      val,
+      fieldDef,
+      wgtDef,
+      isForDisplay,
+      op,
+      opDef,
+      rightFieldDef
+    ) => {
+      return isForDisplay ? rightFieldDef.label || val : val
     },
     sqlFormatValue: (val, fieldDef, wgtDef, op, opDef, rightFieldDef) => {
-      return val;
+      return val
     },
     spelFormatValue: (val, fieldDef, wgtDef, op, opDef) => {
-      return val;
+      return val
     },
     valueLabel: "Field to compare",
     valuePlaceholder: "Select field to compare",
     customProps: {
-      showSearch: true
-    }
+      showSearch: true,
+    },
   },
   func: {
     valueSrc: "func",
@@ -917,16 +1296,16 @@ const widgets = {
     valuePlaceholder: "Select function",
     customProps: {
       //showSearch: true
-    }
+    },
   },
   case_value: {
     valueSrc: "value",
     type: "case_value",
     spelFormatValue: (val) => {
-      return spelEscape(val === "" ? null : val);
+      return spelEscape(val === "" ? null : val)
     },
     spelImportValue: (val) => {
-      return [val.value, []];
+      return [val.value, []]
     },
   },
   rangeslider: {
@@ -940,15 +1319,15 @@ const widgets = {
       { label: "Number to", placeholder: "Enter number to" },
     ],
     formatValue: (val, fieldDef, wgtDef, isForDisplay) => {
-      return isForDisplay ? stringifyForDisplay(val) : JSON.stringify(val);
+      return isForDisplay ? stringifyForDisplay(val) : JSON.stringify(val)
     },
     sqlFormatValue: (val, fieldDef, wgtDef, op, opDef) => {
-      return SqlString.escape(val);
+      return SqlString.escape(val)
     },
     singleWidget: "slider",
-    toJS: (val, fieldSettings) => (val),
+    toJS: (val, fieldSettings) => val,
   },
-};
+}
 
 //----------------------------  types
 
@@ -997,7 +1376,7 @@ const types = {
           "not_equal",
           "proximity", //can exclude if you want
         ],
-      }
+      },
     },
   },
   number: {
@@ -1031,7 +1410,7 @@ const types = {
           // "is_empty",
           // "is_not_empty",
           "is_null",
-          "is_not_null"
+          "is_not_null",
         ],
       },
     },
@@ -1052,9 +1431,9 @@ const types = {
           // "is_empty",
           // "is_not_empty",
           "is_null",
-          "is_not_null"
-        ]
-      }
+          "is_not_null",
+        ],
+      },
     },
   },
   time: {
@@ -1074,8 +1453,8 @@ const types = {
           // "is_not_empty",
           "is_null",
           "is_not_null",
-        ]
-      }
+        ],
+      },
     },
   },
   datetime: {
@@ -1096,7 +1475,7 @@ const types = {
           "is_null",
           "is_not_null",
         ],
-      }
+      },
     },
   },
   select: {
@@ -1114,8 +1493,8 @@ const types = {
         ],
         widgetProps: {
           customProps: {
-            showSearch: true
-          }
+            showSearch: true,
+          },
         },
       },
       multiselect: {
@@ -1144,32 +1523,24 @@ const types = {
           // "is_not_empty",
           "is_null",
           "is_not_null",
-        ]
-      }
+        ],
+      },
     },
   },
   boolean: {
     defaultOperator: "equal",
     widgets: {
       boolean: {
-        operators: [
-          "equal",
-          "not_equal",
-          "is_null",
-          "is_not_null",
-        ],
+        operators: ["equal", "not_equal", "is_null", "is_not_null"],
         widgetProps: {
           //you can enable this if you don't use fields as value sources
           // hideOperator: true,
           // operatorInlineLabel: "is",
-        }
+        },
       },
       field: {
-        operators: [
-          "equal",
-          "not_equal",
-        ],
-      }
+        operators: ["equal", "not_equal"],
+      },
     },
   },
   "!group": {
@@ -1178,7 +1549,7 @@ const types = {
     widgets: {
       number: {
         widgetProps: {
-          min: 0
+          min: 0,
         },
         operators: [
           // w/o operand
@@ -1198,114 +1569,144 @@ const types = {
         ],
         opProps: {
           equal: {
-            label: "Count =="
+            label: "Count ==",
           },
           not_equal: {
-            label: "Count !="
+            label: "Count !=",
           },
           less: {
-            label: "Count <"
+            label: "Count <",
           },
           less_or_equal: {
-            label: "Count <="
+            label: "Count <=",
           },
           greater: {
-            label: "Count >"
+            label: "Count >",
           },
           greater_or_equal: {
-            label: "Count >="
+            label: "Count >=",
           },
           between: {
-            label: "Count between"
+            label: "Count between",
           },
           not_between: {
-            label: "Count not between"
-          }
-        }
-      }
-    }
+            label: "Count not between",
+          },
+        },
+      },
+    },
   },
-  "case_value": {
+  case_value: {
     mainWidget: "case_value",
     widgets: {
-      case_value: {}
-    }
+      case_value: {},
+    },
   },
-};
+}
 
 //----------------------------  settings
 
 const settings = {
   ...defaultSettings,
 
-  formatField: (field, parts, label2, fieldDefinition, config, isForDisplay) => {
-    if (isForDisplay)
-      return label2;
-    else
-      return field;
+  formatField: (
+    field,
+    parts,
+    label2,
+    fieldDefinition,
+    config,
+    isForDisplay
+  ) => {
+    if (isForDisplay) return label2
+    else return field
   },
-  formatSpelField: (field, parentField, parts, partsExt, fieldDefinition, config) => {
-    let fieldName = partsExt.map(({ key, parent }, ind) => {
-      if (ind == 0) {
-        if (parent == "[map]")
-          return `#this[${spelEscape(key)}]`;
-        else if (parent == "[class]")
-          return key;
-        else
-          return key;
-      } else {
-        if (parent == "map" || parent == "[map]")
-          return `[${spelEscape(key)}]`;
-        else if (parent == "class" || parent == "[class]")
-          return `.${key}`;
-        else
-          return `.${key}`;
-      }
-    }).join("");
+  formatSpelField: (
+    field,
+    parentField,
+    parts,
+    partsExt,
+    fieldDefinition,
+    config
+  ) => {
+    let fieldName = partsExt
+      .map(({ key, parent }, ind) => {
+        if (ind == 0) {
+          if (parent == "[map]") return `#this[${spelEscape(key)}]`
+          else if (parent == "[class]") return key
+          else return key
+        } else {
+          if (parent == "map" || parent == "[map]")
+            return `[${spelEscape(key)}]`
+          else if (parent == "class" || parent == "[class]") return `.${key}`
+          else return `.${key}`
+        }
+      })
+      .join("")
     if (fieldDefinition.isSpelVariable) {
-      fieldName = "#" + fieldName;
+      fieldName = "#" + fieldName
     }
-    return fieldName;
+    return fieldName
   },
   sqlFormatReverse: (q) => {
-    if (q == undefined) return undefined;
-    return "NOT(" + q + ")";
+    if (q == undefined) return undefined
+    return "NOT(" + q + ")"
   },
   spelFormatReverse: (q) => {
-    if (q == undefined) return undefined;
-    return "!(" + q + ")";
+    if (q == undefined) return undefined
+    return "!(" + q + ")"
   },
-  formatReverse: (q, operator, reversedOp, operatorDefinition, revOperatorDefinition, isForDisplay) => {
-    if (q == undefined) return undefined;
-    if (isForDisplay)
-      return "NOT (" + q + ")";
-    else
-      return "!(" + q + ")";
+  formatReverse: (
+    q,
+    operator,
+    reversedOp,
+    operatorDefinition,
+    revOperatorDefinition,
+    isForDisplay
+  ) => {
+    if (q == undefined) return undefined
+    if (isForDisplay) return "NOT (" + q + ")"
+    else return "!(" + q + ")"
   },
-  formatAggr: (whereStr, aggrField, operator, value, valueSrc, valueType, opDef, operatorOptions, isForDisplay, aggrFieldDef) => {
-    const { labelForFormat, cardinality } = opDef;
+  formatAggr: (
+    whereStr,
+    aggrField,
+    operator,
+    value,
+    valueSrc,
+    valueType,
+    opDef,
+    operatorOptions,
+    isForDisplay,
+    aggrFieldDef
+  ) => {
+    const { labelForFormat, cardinality } = opDef
     if (cardinality == 0) {
-      const cond = whereStr ? ` HAVE ${whereStr}` : "";
-      return `${labelForFormat} OF ${aggrField}${cond}`;
+      const cond = whereStr ? ` HAVE ${whereStr}` : ""
+      return `${labelForFormat} OF ${aggrField}${cond}`
     } else if (cardinality == undefined || cardinality == 1) {
-      const cond = whereStr ? ` WHERE ${whereStr}` : "";
-      return `COUNT OF ${aggrField}${cond} ${labelForFormat} ${value}`;
+      const cond = whereStr ? ` WHERE ${whereStr}` : ""
+      return `COUNT OF ${aggrField}${cond} ${labelForFormat} ${value}`
     } else if (cardinality == 2) {
-      const cond = whereStr ? ` WHERE ${whereStr}` : "";
-      let valFrom = value.first();
-      let valTo = value.get(1);
-      return `COUNT OF ${aggrField}${cond} ${labelForFormat} ${valFrom} AND ${valTo}`;
+      const cond = whereStr ? ` WHERE ${whereStr}` : ""
+      let valFrom = value.first()
+      let valTo = value.get(1)
+      return `COUNT OF ${aggrField}${cond} ${labelForFormat} ${valFrom} AND ${valTo}`
     }
   },
-  canCompareFieldWithField: (leftField, leftFieldConfig, rightField, rightFieldConfig) => {
+  canCompareFieldWithField: (
+    leftField,
+    leftFieldConfig,
+    rightField,
+    rightFieldConfig
+  ) => {
     //for type == 'select'/'multiselect' you can check listValues
-    return true;
+    return true
   },
 
   // enable compare fields
   valueSourcesInfo: {
     value: {
-      label: "Value"
+      label: "Value",
     },
     field: {
       label: "Field",
@@ -1314,17 +1715,17 @@ const settings = {
     func: {
       label: "Function",
       widget: "func",
-    }
+    },
   },
   customFieldSelectProps: {
-    showSearch: true
+    showSearch: true,
   },
 
   defaultSliderWidth: "200px",
   defaultSelectWidth: "200px",
   defaultSearchWidth: "100px",
   defaultMaxRows: 5,
-};
+}
 
 //----------------------------
 
@@ -1334,4 +1735,4 @@ export default {
   widgets,
   types,
   settings,
-};
+}

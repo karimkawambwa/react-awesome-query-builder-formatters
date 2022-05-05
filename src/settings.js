@@ -1,9 +1,14 @@
 export const settings = {
-  formatField: (field, parts, label2, fieldDefinition, config, isForDisplay) => {
-    if (isForDisplay)
-      return label2;
-    else
-      return field;
+  formatField: (
+    field,
+    parts,
+    label2,
+    fieldDefinition,
+    config,
+    isForDisplay
+  ) => {
+    if (isForDisplay) return label2
+    else return field
   },
   valueSourcesInfo: {
     value: {},
@@ -28,11 +33,11 @@ export const settings = {
   groupOperators: ["some", "all", "none"],
 
   convertableWidgets: {
-    "number": ["slider", "rangeslider"],
-    "slider": ["number", "rangeslider"],
-    "rangeslider": ["number", "slider"],
-    "text": ["textarea"],
-    "textarea": ["text"]
+    number: ["slider", "rangeslider"],
+    slider: ["number", "rangeslider"],
+    rangeslider: ["number", "slider"],
+    text: ["textarea"],
+    textarea: ["text"],
   },
 
   // localization
@@ -66,6 +71,6 @@ export const settings = {
   jsonLogic: {
     groupVarKey: "var",
     altVarKey: "var",
-    lockedOp: "locked"
-  }
-};
+    lockedOp: "locked",
+  },
+}

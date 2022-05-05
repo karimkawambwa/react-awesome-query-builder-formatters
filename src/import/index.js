@@ -1,3 +1,3 @@
-export * from "./tree";
-export * from "./jsonLogic";
-export * from "./spel";
+export * from "./tree"
+export * from "./jsonLogic"
+export * from "./spel"

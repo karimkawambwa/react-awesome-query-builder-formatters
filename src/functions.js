@@ -1,4 +1,4 @@
-import moment from "moment";
+import moment from "moment"
 
 const NOW = {
   label: "Now",
@@ -13,41 +13,41 @@ const NOW = {
   sqlFormatFunc: () => "NOW()",
   mongoFormatFunc: () => new Date(),
   formatFunc: () => "NOW",
-};
+}
 
 const RELATIVE_DATETIME = {
   label: "Relative",
   returnType: "datetime",
   renderBrackets: ["", ""],
   renderSeps: ["", "", ""],
-  jsonLogic: ({date, op, val, dim}) => ({
-    "date_add": [
-      date,
-      val * (op == "minus" ? -1 : +1),
-      dim
-    ]
+  jsonLogic: ({ date, op, val, dim }) => ({
+    date_add: [date, val * (op == "minus" ? -1 : +1), dim],
   }),
   jsonLogicImport: (v) => {
-    const date = v["date_add"][0];
-    const val = Math.abs(v["date_add"][1]);
-    const op = v["date_add"][1] >= 0 ? "plus" : "minus";
-    const dim = v["date_add"][2];
-    return [date, op, val, dim];
+    const date = v["date_add"][0]
+    const val = Math.abs(v["date_add"][1])
+    const op = v["date_add"][1] >= 0 ? "plus" : "minus"
+    const dim = v["date_add"][2]
+    return [date, op, val, dim]
   },
   jsonLogicCustomOps: {
-    date_add: (date, val, dim) => moment(date).add(val, dim).toDate()
+    date_add: (date, val, dim) => moment(date).add(val, dim).toDate(),
   },
   // MySQL
   //todo: other SQL dialects?
-  sqlFormatFunc: ({date, op, val, dim}) => `DATE_ADD(${date}, INTERVAL ${parseInt(val) * (op == "minus" ? -1 : +1)} ${dim.replace(/^'|'$/g, "")})`,
+  sqlFormatFunc: ({ date, op, val, dim }) =>
+    `DATE_ADD(${date}, INTERVAL ${
+      parseInt(val) * (op == "minus" ? -1 : +1)
+    } ${dim.replace(/^'|'$/g, "")})`,
   mongoFormatFunc: null, //todo: support?
   //todo: spel
-  formatFunc: ({date, op, val, dim}) => (!val ? date : `${date} ${op == "minus" ? "-" : "+"} ${val} ${dim}`),
+  formatFunc: ({ date, op, val, dim }) =>
+    !val ? date : `${date} ${op == "minus" ? "-" : "+"} ${val} ${dim}`,
   args: {
     date: {
       label: "Date",
       type: "datetime",
-      defaultValue: {func: "NOW", args: []},
+      defaultValue: { func: "NOW", args: [] },
       valueSources: ["func", "field"],
     },
     op: {
@@ -57,15 +57,15 @@ const RELATIVE_DATETIME = {
       valueSources: ["value"],
       mainWidgetProps: {
         customProps: {
-          showSearch: false
-        }
+          showSearch: false,
+        },
       },
       fieldSettings: {
         listValues: {
           plus: "+",
           minus: "-",
         },
-      }
+      },
     },
     val: {
       label: "Value",
@@ -83,8 +83,8 @@ const RELATIVE_DATETIME = {
       valueSources: ["value"],
       mainWidgetProps: {
         customProps: {
-          showSearch: false
-        }
+          showSearch: false,
+        },
       },
       fieldSettings: {
         listValues: {
@@ -93,10 +93,10 @@ const RELATIVE_DATETIME = {
           month: "month",
           year: "year",
         },
-      }
+      },
     },
-  }
-};
+  },
+}
 
 const LOWER = {
   label: "Lowercase",
@@ -114,8 +114,8 @@ const LOWER = {
       type: "text",
       valueSources: ["value", "field"],
     },
-  }
-};
+  },
+}
 
 const UPPER = {
   label: "Uppercase",
@@ -133,22 +133,24 @@ const UPPER = {
       type: "text",
       valueSources: ["value", "field"],
     },
-  }
-};
+  },
+}
 
 const LINEAR_REGRESSION = {
   label: "Linear regression",
   returnType: "number",
-  formatFunc: ({coef, bias, val}, _) => `(${coef} * ${val} + ${bias})`,
-  sqlFormatFunc: ({coef, bias, val}) => `(${coef} * ${val} + ${bias})`,
-  spelFormatFunc: ({coef, bias, val}) => `(${coef} * ${val} + ${bias})`,
-  mongoFormatFunc: ({coef, bias, val}) => ({"$sum": [{"$multiply": [coef, val]}, bias]}),
-  jsonLogic: ({coef, bias, val}) => ({ "+": [ {"*": [coef, val]}, bias ] }),
+  formatFunc: ({ coef, bias, val }, _) => `(${coef} * ${val} + ${bias})`,
+  sqlFormatFunc: ({ coef, bias, val }) => `(${coef} * ${val} + ${bias})`,
+  spelFormatFunc: ({ coef, bias, val }) => `(${coef} * ${val} + ${bias})`,
+  mongoFormatFunc: ({ coef, bias, val }) => ({
+    $sum: [{ $multiply: [coef, val] }, bias],
+  }),
+  jsonLogic: ({ coef, bias, val }) => ({ "+": [{ "*": [coef, val] }, bias] }),
   jsonLogicImport: (v) => {
-    const coef = v["+"][0]["*"][0];
-    const val = v["+"][0]["*"][1];
-    const bias = v["+"][1];
-    return [coef, val, bias];
+    const coef = v["+"][0]["*"][0]
+    const val = v["+"][0]["*"][1]
+    const bias = v["+"][1]
+    return [coef, val, bias]
   },
   renderBrackets: ["", ""],
   renderSeps: [" * ", " + "],
@@ -169,14 +171,8 @@ const LINEAR_REGRESSION = {
       type: "number",
       defaultValue: 0,
       valueSources: ["value"],
-    }
-  }
-};
+    },
+  },
+}
 
-export {
-  LOWER,
-  UPPER,
-  NOW,
-  RELATIVE_DATETIME,
-  LINEAR_REGRESSION,
-};
+export { LOWER, UPPER, NOW, RELATIVE_DATETIME, LINEAR_REGRESSION }

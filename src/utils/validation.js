@@ -1,97 +1,114 @@
-import { List } from "immutable";
-import omit from "lodash/omit";
+import { List } from "immutable"
+import omit from "lodash/omit"
 import {
-  getFieldConfig, getFieldWidgetConfig, getFuncConfig, getOperatorConfig
-} from "./configUtils";
-import { defaultOperatorOptions } from "./defaultUtils";
-import { getNewValueForFieldOp, getOperatorsForField, getWidgetForFieldOp } from "./ruleUtils";
-import { deepEqual, defaultValue, getItemInListValues, logger } from "./stuff";
-
+  getFieldConfig,
+  getFieldWidgetConfig,
+  getFuncConfig,
+  getOperatorConfig,
+} from "./configUtils"
+import { defaultOperatorOptions } from "./defaultUtils"
+import {
+  getNewValueForFieldOp,
+  getOperatorsForField,
+  getWidgetForFieldOp,
+} from "./ruleUtils"
+import { deepEqual, defaultValue, getItemInListValues, logger } from "./stuff"
 
 const typeOf = (v) => {
-  if (typeof v == "object" && v !== null && Array.isArray(v))
-    return "array";
-  else
-    return (typeof v);
-};
+  if (typeof v == "object" && v !== null && Array.isArray(v)) return "array"
+  else return typeof v
+}
 
 const isTypeOf = (v, type) => {
-  if (typeOf(v) == type)
-    return true;
-  if (type == "number" && !isNaN(v))
-    return true; //can be casted
-  return false;
-};
+  if (typeOf(v) == type) return true
+  if (type == "number" && !isNaN(v)) return true //can be casted
+  return false
+}
 
-export const validateTree = (tree, _oldTree, config, oldConfig, removeEmptyGroups, removeIncompleteRules) => {
+export const validateTree = (
+  tree,
+  _oldTree,
+  config,
+  oldConfig,
+  removeEmptyGroups,
+  removeIncompleteRules
+) => {
   if (removeEmptyGroups === undefined) {
-    removeEmptyGroups = config.settings.removeEmptyGroupsOnLoad;
+    removeEmptyGroups = config.settings.removeEmptyGroupsOnLoad
   }
   if (removeIncompleteRules === undefined) {
-    removeIncompleteRules = config.settings.removeIncompleteRulesOnLoad;
+    removeIncompleteRules = config.settings.removeIncompleteRulesOnLoad
   }
   const c = {
-    config, oldConfig, removeEmptyGroups, removeIncompleteRules
-  };
-  return validateItem(tree, [], null, {}, c);
-};
+    config,
+    oldConfig,
+    removeEmptyGroups,
+    removeIncompleteRules,
+  }
+  return validateItem(tree, [], null, {}, c)
+}
 
 function validateItem(item, path, itemId, meta, c) {
-  const type = item.get("type");
-  const children = item.get("children1");
+  const type = item.get("type")
+  const children = item.get("children1")
 
-  if ((type === "group" || type === "rule_group" || type == "case_group" || type == "switch_group") && children && children.size) {
-    return validateGroup(item, path, itemId, meta, c);
+  if (
+    (type === "group" ||
+      type === "rule_group" ||
+      type == "case_group" ||
+      type == "switch_group") &&
+    children &&
+    children.size
+  ) {
+    return validateGroup(item, path, itemId, meta, c)
   } else if (type === "rule") {
-    return validateRule(item, path, itemId, meta, c);
+    return validateRule(item, path, itemId, meta, c)
   } else {
-    return item;
+    return item
   }
 }
 
 function validateGroup(item, path, itemId, meta, c) {
-  const { removeEmptyGroups } = c;
-  let id = item.get("id");
-  let children = item.get("children1");
-  const oldChildren = children;
+  const { removeEmptyGroups } = c
+  let id = item.get("id")
+  let children = item.get("children1")
+  const oldChildren = children
 
   if (!id && itemId) {
-    id = itemId;
-    item = item.set("id", id);
-    meta.sanitized = true;
+    id = itemId
+    item = item.set("id", id)
+    meta.sanitized = true
   }
 
   //validate children
-  let submeta = {};
-  children = children
-    .map((currentChild, childId) => validateItem(currentChild, path.concat(id), childId, submeta, c));
+  let submeta = {}
+  children = children.map((currentChild, childId) =>
+    validateItem(currentChild, path.concat(id), childId, submeta, c)
+  )
   if (removeEmptyGroups)
-    children = children.filter((currentChild) => (currentChild != undefined));
-  let sanitized = submeta.sanitized || (oldChildren.size != children.size);
+    children = children.filter((currentChild) => currentChild != undefined)
+  let sanitized = submeta.sanitized || oldChildren.size != children.size
   if (!children.size && removeEmptyGroups && path.length) {
-    sanitized = true;
-    item = undefined;
+    sanitized = true
+    item = undefined
   }
 
-  if (sanitized)
-    meta.sanitized = true;
-  if (sanitized && item)
-    item = item.set("children1", children);
-  return item;
+  if (sanitized) meta.sanitized = true
+  if (sanitized && item) item = item.set("children1", children)
+  return item
 }
 
-
 function validateRule(item, path, itemId, meta, c) {
-  const { removeIncompleteRules, config, oldConfig } = c;
-  const { showErrorMessage } = config.settings;
-  let id = item.get("id");
-  let properties = item.get("properties");
-  let field = properties.get("field") || null;
-  let operator = properties.get("operator") || null;
-  let operatorOptions = properties.get("operatorOptions");
-  let valueSrc = properties.get("valueSrc");
-  let value = properties.get("value");
-  let valueError = properties.get("valueError");
+  const { removeIncompleteRules, config, oldConfig } = c
+  const { showErrorMessage } = config.settings
+  let id = item.get("id")
+  let properties = item.get("properties")
+  let field = properties.get("field") || null
+  let operator = properties.get("operator") || null
+  let operatorOptions = properties.get("operatorOptions")
+  let valueSrc = properties.get("valueSrc")
+  let value = properties.get("value")
+  let valueError = properties.get("valueError")
   const oldSerialized = {
     field,
     operator,
@@ -99,81 +116,100 @@ function validateRule(item, path, itemId, meta, c) {
     valueSrc: valueSrc ? valueSrc.toJS() : null,
     value: value ? value.toJS() : null,
     valueError: valueError ? valueError.toJS() : null,
-  };
-  let _wasValid = field && operator && value && !value.includes(undefined);
+  }
+  let _wasValid = field && operator && value && !value.includes(undefined)
 
   if (!id && itemId) {
-    id = itemId;
-    item = item.set("id", id);
-    meta.sanitized = true;
+    id = itemId
+    item = item.set("id", id)
+    meta.sanitized = true
   }
 
   //validate field
-  const fieldDefinition = field ? getFieldConfig(config, field) : null;
+  const fieldDefinition = field ? getFieldConfig(config, field) : null
   if (field && !fieldDefinition) {
-    logger.warn(`No config for field ${field}`);
-    field = null;
+    logger.warn(`No config for field ${field}`)
+    field = null
   }
   if (field == null) {
-    properties = ["operator", "operatorOptions", "valueSrc", "value"].reduce((map, key) => map.delete(key), properties);
-    operator = null;
+    properties = ["operator", "operatorOptions", "valueSrc", "value"].reduce(
+      (map, key) => map.delete(key),
+      properties
+    )
+    operator = null
   }
 
   //validate operator
   // Backward compatibility: obsolete operator range_between
   if (operator == "range_between" || operator == "range_not_between") {
-    operator = operator == "range_between" ? "between" : "not_between";
-    console.info(`Fixed operator ${properties.get("operator")} to ${operator}`);
-    properties = properties.set("operator", operator);
+    operator = operator == "range_between" ? "between" : "not_between"
+    console.info(`Fixed operator ${properties.get("operator")} to ${operator}`)
+    properties = properties.set("operator", operator)
   }
-  const operatorDefinition = operator ? getOperatorConfig(config, operator, field) : null;
+  const operatorDefinition = operator
+    ? getOperatorConfig(config, operator, field)
+    : null
   if (operator && !operatorDefinition) {
-    console.warn(`No config for operator ${operator}`);
-    operator = null;
+    console.warn(`No config for operator ${operator}`)
+    operator = null
   }
-  const availOps = field ? getOperatorsForField(config, field) : [];
+  const availOps = field ? getOperatorsForField(config, field) : []
   if (!availOps) {
-    console.warn(`Type of field ${field} is not supported`);
-    operator = null;
+    console.warn(`Type of field ${field} is not supported`)
+    operator = null
   } else if (operator && availOps.indexOf(operator) == -1) {
     if (operator == "is_empty" || operator == "is_not_empty") {
       // Backward compatibility: is_empty #494
-      operator = operator == "is_empty" ? "is_null" : "is_not_null";
-      console.info(`Fixed operator ${properties.get("operator")} to ${operator} for ${field}`);
-      properties = properties.set("operator", operator);
+      operator = operator == "is_empty" ? "is_null" : "is_not_null"
+      console.info(
+        `Fixed operator ${properties.get(
+          "operator"
+        )} to ${operator} for ${field}`
+      )
+      properties = properties.set("operator", operator)
     } else {
-      console.warn(`Operator ${operator} is not supported for field ${field}`);
-      operator = null;
+      console.warn(`Operator ${operator} is not supported for field ${field}`)
+      operator = null
     }
   }
   if (operator == null) {
-    properties = properties.delete("operatorOptions");
-    properties = properties.delete("valueSrc");
-    properties = properties.delete("value");
+    properties = properties.delete("operatorOptions")
+    properties = properties.delete("valueSrc")
+    properties = properties.delete("value")
   }
 
   //validate operator options
-  operatorOptions = properties.get("operatorOptions");
-  let _operatorCardinality = operator ? defaultValue(operatorDefinition.cardinality, 1) : null;
-  if (!operator || operatorOptions && !operatorDefinition.options) {
-    operatorOptions = null;
-    properties = properties.delete("operatorOptions");
+  operatorOptions = properties.get("operatorOptions")
+  let _operatorCardinality = operator
+    ? defaultValue(operatorDefinition.cardinality, 1)
+    : null
+  if (!operator || (operatorOptions && !operatorDefinition.options)) {
+    operatorOptions = null
+    properties = properties.delete("operatorOptions")
   } else if (operator && !operatorOptions && operatorDefinition.options) {
-    operatorOptions = defaultOperatorOptions(config, operator, field);
-    properties = properties.set("operatorOptions", operatorOptions);
+    operatorOptions = defaultOperatorOptions(config, operator, field)
+    properties = properties.set("operatorOptions", operatorOptions)
   }
 
   //validate values
-  valueSrc = properties.get("valueSrc");
-  value = properties.get("value");
-  let { newValue, newValueSrc, newValueError } = getNewValueForFieldOp(config, oldConfig, properties, field, operator, null, true);
-  value = newValue;
-  valueSrc = newValueSrc;
-  valueError = newValueError;
-  properties = properties.set("value", value);
-  properties = properties.set("valueSrc", valueSrc);
+  valueSrc = properties.get("valueSrc")
+  value = properties.get("value")
+  let { newValue, newValueSrc, newValueError } = getNewValueForFieldOp(
+    config,
+    oldConfig,
+    properties,
+    field,
+    operator,
+    null,
+    true
+  )
+  value = newValue
+  valueSrc = newValueSrc
+  valueError = newValueError
+  properties = properties.set("value", value)
+  properties = properties.set("valueSrc", valueSrc)
   if (showErrorMessage) {
-    properties = properties.set("valueError", valueError);
+    properties = properties.set("valueError", valueError)
   }
 
   const newSerialized = {
@@ -183,198 +219,319 @@ function validateRule(item, path, itemId, meta, c) {
     valueSrc: valueSrc ? valueSrc.toJS() : null,
     value: value ? value.toJS() : null,
     valueError: valueError ? valueError.toJS() : null,
-  };
-  const sanitized = !deepEqual(oldSerialized, newSerialized);
-  const isComplete = field && operator && value && !value.includes(undefined);
-  if (sanitized)
-    meta.sanitized = true;
-  if (!isComplete && removeIncompleteRules)
-    item = undefined;
-  else if (sanitized)
-    item = item.set("properties", properties);
+  }
+  const sanitized = !deepEqual(oldSerialized, newSerialized)
+  const isComplete = field && operator && value && !value.includes(undefined)
+  if (sanitized) meta.sanitized = true
+  if (!isComplete && removeIncompleteRules) item = undefined
+  else if (sanitized) item = item.set("properties", properties)
 
-  return item;
+  return item
 }
 
-
 /**
- * 
+ *
  * @param {bool} canFix true is useful for func values to remove bad args
  * @param {bool} isEndValue false if value is in process of editing by user
  * @param {bool} isRawValue false is used only internally from validateFuncValue
  * @return {array} [validError, fixedValue] - if validError === null and canFix == true, fixedValue can differ from value if was fixed
  */
-export const validateValue = (config, leftField, field, operator, value, valueType, valueSrc, asyncListValues, canFix = false, isEndValue = false, isRawValue = true) => {
-  let validError = null;
-  let fixedValue = value;
+export const validateValue = (
+  config,
+  leftField,
+  field,
+  operator,
+  value,
+  valueType,
+  valueSrc,
+  asyncListValues,
+  canFix = false,
+  isEndValue = false,
+  isRawValue = true
+) => {
+  let validError = null
+  let fixedValue = value
 
   if (value != null) {
     if (valueSrc == "field") {
-      [validError, fixedValue] = validateFieldValue(leftField, field, value, valueSrc, valueType, asyncListValues, config, operator, isEndValue, canFix);
+      ;[validError, fixedValue] = validateFieldValue(
+        leftField,
+        field,
+        value,
+        valueSrc,
+        valueType,
+        asyncListValues,
+        config,
+        operator,
+        isEndValue,
+        canFix
+      )
     } else if (valueSrc == "func") {
-      [validError, fixedValue] = validateFuncValue(leftField, field, value, valueSrc, valueType, asyncListValues, config, operator, isEndValue, canFix);
+      ;[validError, fixedValue] = validateFuncValue(
+        leftField,
+        field,
+        value,
+        valueSrc,
+        valueType,
+        asyncListValues,
+        config,
+        operator,
+        isEndValue,
+        canFix
+      )
     } else if (valueSrc == "value" || !valueSrc) {
-      [validError, fixedValue] = validateNormalValue(leftField, field, value, valueSrc, valueType, asyncListValues, config, operator, isEndValue, canFix);
+      ;[validError, fixedValue] = validateNormalValue(
+        leftField,
+        field,
+        value,
+        valueSrc,
+        valueType,
+        asyncListValues,
+        config,
+        operator,
+        isEndValue,
+        canFix
+      )
     }
 
     if (!validError) {
-      const fieldConfig = getFieldConfig(config, field);
-      const w = getWidgetForFieldOp(config, field, operator, valueSrc);
-      const operatorDefinition = operator ? getOperatorConfig(config, operator, field) : null;
-      const fieldWidgetDefinition = omit(getFieldWidgetConfig(config, field, operator, w, valueSrc), ["factory"]);
-      const rightFieldDefinition = (valueSrc == "field" ? getFieldConfig(config, value) : null);
-      const fieldSettings = fieldWidgetDefinition; // widget definition merged with fieldSettings
+      const fieldConfig = getFieldConfig(config, field)
+      const w = getWidgetForFieldOp(config, field, operator, valueSrc)
+      const operatorDefinition = operator
+        ? getOperatorConfig(config, operator, field)
+        : null
+      const fieldWidgetDefinition = omit(
+        getFieldWidgetConfig(config, field, operator, w, valueSrc),
+        ["factory"]
+      )
+      const rightFieldDefinition =
+        valueSrc == "field" ? getFieldConfig(config, value) : null
+      const fieldSettings = fieldWidgetDefinition // widget definition merged with fieldSettings
 
-      const fn = fieldWidgetDefinition.validateValue;
+      const fn = fieldWidgetDefinition.validateValue
       if (typeof fn == "function") {
-        const args = [
-          fixedValue,
-          fieldSettings,
-          operator,
-          operatorDefinition
-        ];
-        if (valueSrc == "field")
-          args.push(rightFieldDefinition);
-        const validResult = fn(...args);
+        const args = [fixedValue, fieldSettings, operator, operatorDefinition]
+        if (valueSrc == "field") args.push(rightFieldDefinition)
+        const validResult = fn(...args)
         if (typeof validResult == "boolean") {
-          if (validResult == false)
-            validError = "Invalid value";
+          if (validResult == false) validError = "Invalid value"
         } else {
-          validError = validResult;
+          validError = validResult
         }
       }
     }
   }
 
   if (isRawValue && validError) {
-    console.warn("[RAQB validate]", `Field ${field}: ${validError}`);
+    console.warn("[RAQB validate]", `Field ${field}: ${validError}`)
   }
 
-  return [validError, validError ? value : fixedValue];
-};
+  return [validError, validError ? value : fixedValue]
+}
 
 const validateValueInList = (value, listValues) => {
-  const values = List.isList(value) ? value.toJS() : (value instanceof Array ? [...value] : undefined);
+  const values = List.isList(value)
+    ? value.toJS()
+    : value instanceof Array
+    ? [...value]
+    : undefined
   if (values) {
     for (let i = 0; i < values.length; i++) {
-      const vv = getItemInListValues(listValues, values[i]);
+      const vv = getItemInListValues(listValues, values[i])
       if (vv == undefined) {
-        return [`Value ${value[i]} is not in list of values`, values];
+        return [`Value ${value[i]} is not in list of values`, values]
       } else {
-        values[i] = vv.value;
+        values[i] = vv.value
       }
     }
-    return [null, values];
+    return [null, values]
   } else {
-    const vv = getItemInListValues(listValues, value);
+    const vv = getItemInListValues(listValues, value)
     if (vv == undefined) {
-      return [`Value ${value} is not in list of values`, value];
+      return [`Value ${value} is not in list of values`, value]
     } else {
-      value = vv.value;
+      value = vv.value
     }
-    return [null, value];
+    return [null, value]
   }
-};
+}
 
 /**
-* 
-*/
-const validateNormalValue = (leftField, field, value, valueSrc, valueType, asyncListValues, config, operator = null, isEndValue = false, canFix = false) => {
-  let fixedValue = value;
+ *
+ */
+const validateNormalValue = (
+  leftField,
+  field,
+  value,
+  valueSrc,
+  valueType,
+  asyncListValues,
+  config,
+  operator = null,
+  isEndValue = false,
+  canFix = false
+) => {
+  let fixedValue = value
   if (field) {
-    const fieldConfig = getFieldConfig(config, field);
-    const w = getWidgetForFieldOp(config, field, operator, valueSrc);
-    const wConfig = config.widgets[w];
-    const wType = wConfig.type;
-    const jsType = wConfig.jsType;
-    const fieldSettings = fieldConfig.fieldSettings;
+    const fieldConfig = getFieldConfig(config, field)
+    const w = getWidgetForFieldOp(config, field, operator, valueSrc)
+    const wConfig = config.widgets[w]
+    const wType = wConfig.type
+    const jsType = wConfig.jsType
+    const fieldSettings = fieldConfig.fieldSettings
 
     if (valueType != wType)
-      return [`Value should have type ${wType}, but got value of type ${valueType}`, value];
-    if (jsType && !isTypeOf(value, jsType) && !fieldSettings.listValues) { //tip: can skip tye check for listValues
-      return [`Value should have JS type ${jsType}, but got value of type ${typeof value}`, value];
+      return [
+        `Value should have type ${wType}, but got value of type ${valueType}`,
+        value,
+      ]
+    if (jsType && !isTypeOf(value, jsType) && !fieldSettings.listValues) {
+      //tip: can skip tye check for listValues
+      return [
+        `Value should have JS type ${jsType}, but got value of type ${typeof value}`,
+        value,
+      ]
     }
 
     if (fieldSettings) {
-      const listValues = asyncListValues || fieldSettings.listValues;
+      const listValues = asyncListValues || fieldSettings.listValues
       if (listValues && !fieldSettings.allowCustomValues) {
-        return validateValueInList(value, listValues);
+        return validateValueInList(value, listValues)
       }
       if (fieldSettings.min != null && value < fieldSettings.min) {
-        return [`Value ${value} < min ${fieldSettings.min}`, value];
+        return [`Value ${value} < min ${fieldSettings.min}`, value]
       }
       if (fieldSettings.max != null && value > fieldSettings.max) {
-        return [`Value ${value} > max ${fieldSettings.max}`, value];
+        return [`Value ${value} > max ${fieldSettings.max}`, value]
       }
     }
   }
 
-  return [null, value];
-};
-
+  return [null, value]
+}
 
 /**
-* 
-*/
-const validateFieldValue = (leftField, field, value, _valueSrc, valueType, asyncListValues, config, operator = null, isEndValue = false, canFix = false) => {
-  const { fieldSeparator } = config.settings;
-  const isFuncArg = typeof field == "object" && field?._isFuncArg;
-  const leftFieldStr = Array.isArray(leftField) ? leftField.join(fieldSeparator) : leftField;
-  const rightFieldStr = Array.isArray(value) ? value.join(fieldSeparator) : value;
-  const rightFieldDefinition = getFieldConfig(config, value);
-  if (!rightFieldDefinition)
-    return [`Unknown field ${value}`, value];
+ *
+ */
+const validateFieldValue = (
+  leftField,
+  field,
+  value,
+  _valueSrc,
+  valueType,
+  asyncListValues,
+  config,
+  operator = null,
+  isEndValue = false,
+  canFix = false
+) => {
+  const { fieldSeparator } = config.settings
+  const isFuncArg = typeof field == "object" && field?._isFuncArg
+  const leftFieldStr = Array.isArray(leftField)
+    ? leftField.join(fieldSeparator)
+    : leftField
+  const rightFieldStr = Array.isArray(value)
+    ? value.join(fieldSeparator)
+    : value
+  const rightFieldDefinition = getFieldConfig(config, value)
+  if (!rightFieldDefinition) return [`Unknown field ${value}`, value]
   if (rightFieldStr == leftFieldStr && !isFuncArg)
-    return [`Can't compare field ${leftField} with itself`, value];
+    return [`Can't compare field ${leftField} with itself`, value]
   if (valueType && valueType != rightFieldDefinition.type)
-    return [`Field ${value} is of type ${rightFieldDefinition.type}, but expected ${valueType}`, value];
-  return [null, value];
-};
+    return [
+      `Field ${value} is of type ${rightFieldDefinition.type}, but expected ${valueType}`,
+      value,
+    ]
+  return [null, value]
+}
 
 /**
-* 
-*/
-const validateFuncValue = (leftField, field, value, _valueSrc, valueType, asyncListValues, config, operator = null, isEndValue = false, canFix = false) => {
-  let fixedValue = value;
+ *
+ */
+const validateFuncValue = (
+  leftField,
+  field,
+  value,
+  _valueSrc,
+  valueType,
+  asyncListValues,
+  config,
+  operator = null,
+  isEndValue = false,
+  canFix = false
+) => {
+  let fixedValue = value
 
   if (value) {
-    const funcKey = value.get("func");
+    const funcKey = value.get("func")
     if (funcKey) {
-      const funcConfig = getFuncConfig(config, funcKey);
+      const funcConfig = getFuncConfig(config, funcKey)
       if (funcConfig) {
         if (valueType && funcConfig.returnType != valueType)
-          return [`Function ${funcKey} should return value of type ${funcConfig.returnType}, but got ${valueType}`, value];
+          return [
+            `Function ${funcKey} should return value of type ${funcConfig.returnType}, but got ${valueType}`,
+            value,
+          ]
         for (const argKey in funcConfig.args) {
-          const argConfig = funcConfig.args[argKey];
-          const args = fixedValue.get("args");
-          const argVal = args ? args.get(argKey) : undefined;
-          const fieldDef = getFieldConfig(config, argConfig);
-          const argValue = argVal ? argVal.get("value") : undefined;
-          const argValueSrc = argVal ? argVal.get("valueSrc") : undefined;
+          const argConfig = funcConfig.args[argKey]
+          const args = fixedValue.get("args")
+          const argVal = args ? args.get(argKey) : undefined
+          const fieldDef = getFieldConfig(config, argConfig)
+          const argValue = argVal ? argVal.get("value") : undefined
+          const argValueSrc = argVal ? argVal.get("valueSrc") : undefined
           if (argValue !== undefined) {
             const [argValidError, fixedArgVal] = validateValue(
-              config, leftField, fieldDef, operator, argValue, argConfig.type, argValueSrc, asyncListValues, canFix, isEndValue, false
-            );
+              config,
+              leftField,
+              fieldDef,
+              operator,
+              argValue,
+              argConfig.type,
+              argValueSrc,
+              asyncListValues,
+              canFix,
+              isEndValue,
+              false
+            )
             if (argValidError !== null) {
               if (canFix) {
-                fixedValue = fixedValue.deleteIn(["args", argKey]);
+                fixedValue = fixedValue.deleteIn(["args", argKey])
                 if (argConfig.defaultValue !== undefined) {
-                  fixedValue = fixedValue.setIn(["args", argKey, "value"], argConfig.defaultValue);
-                  fixedValue = fixedValue.setIn(["args", argKey, "valueSrc"], "value");
+                  fixedValue = fixedValue.setIn(
+                    ["args", argKey, "value"],
+                    argConfig.defaultValue
+                  )
+                  fixedValue = fixedValue.setIn(
+                    ["args", argKey, "valueSrc"],
+                    "value"
+                  )
                 }
               } else {
-                return [`Invalid value of arg ${argKey} for func ${funcKey}: ${argValidError}`, value];
+                return [
+                  `Invalid value of arg ${argKey} for func ${funcKey}: ${argValidError}`,
+                  value,
+                ]
               }
             } else if (fixedArgVal !== argValue) {
-              fixedValue = fixedValue.setIn(["args", argKey, "value"], fixedArgVal);
+              fixedValue = fixedValue.setIn(
+                ["args", argKey, "value"],
+                fixedArgVal
+              )
             }
-          } else if (isEndValue && argConfig.defaultValue === undefined && !canFix) {
-            return [`Value of arg ${argKey} for func ${funcKey} is required`, value];
+          } else if (
+            isEndValue &&
+            argConfig.defaultValue === undefined &&
+            !canFix
+          ) {
+            return [
+              `Value of arg ${argKey} for func ${funcKey} is required`,
+              value,
+            ]
           }
         }
-      } else return [`Unknown function ${funcKey}`, value];
+      } else return [`Unknown function ${funcKey}`, value]
     } // else it's not function value
   } // empty value
 
-  return [null, fixedValue];
-};
+  return [null, fixedValue]
+}
