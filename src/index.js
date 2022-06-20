@@ -641,7 +641,12 @@ const operators = {
       fieldDef
     ) => {
       if (valueSrc == "value") {
-        return `${field} ~* (${values.map((v) => `(${v})`).join("|")})`
+        return `${field} ~*'(${(typeof values === "string"
+          ? values.slice(1, -1).split("', '")
+          : values
+        )
+          .map((v) => `(${SqlString.trim(v)})`)
+          .join("|")})'`
       } else {
         return undefined // not supported
       }
@@ -662,9 +667,12 @@ const operators = {
       fieldDef
     ) => {
       if (valueSrc == "value") {
-        return `${field} !~* (${values
+        return `${field} !~* '(${(typeof values === "string"
+          ? values.slice(1, -1).split("', '")
+          : values
+        )
           .map((v) => `(${SqlString.trim(v)})`)
-          .join("")})`
+          .join("|")})'`
       } else {
         return undefined // not supported
       }
@@ -685,9 +693,12 @@ const operators = {
       fieldDef
     ) => {
       if (valueSrc == "value") {
-        return `${field} ~* (${values
+        return `${field} ~* '(${(typeof values === "string"
+          ? values.slice(1, -1).split("', '")
+          : values
+        )
           .map((v) => `(${SqlString.trim(v)})`)
-          .join("")})`
+          .join("|")})'`
       } else {
         return undefined // not supported
       }
