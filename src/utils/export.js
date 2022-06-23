@@ -1,8 +1,11 @@
 let SqlString = require("sqlstring")
 
 SqlString.trim = (val) => {
-  if (val.charAt(0) == "'") return val.substring(1, val.length - 1)
-  else return val
+  if (val.charAt(0) == "'") {
+    return val.substring(1, val.length - 1)
+  } else {
+    return val
+  }
 }
 
 // Use regex to represent LIKE SQL query

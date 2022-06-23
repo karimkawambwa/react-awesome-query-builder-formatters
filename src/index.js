@@ -641,12 +641,7 @@ const operators = {
       fieldDef
     ) => {
       if (valueSrc == "value") {
-        return `${field} ~*'(${(typeof values === "string"
-          ? values.slice(1, -1).split("', '")
-          : values
-        )
-          .map((v) => `(${SqlString.trim(v)})`)
-          .join("|")})'`
+        return `${field} ~*'${formatValue(values).join("|")}'`
       } else {
         return undefined // not supported
       }
@@ -667,12 +662,7 @@ const operators = {
       fieldDef
     ) => {
       if (valueSrc == "value") {
-        return `${field} !~* '(${(typeof values === "string"
-          ? values.slice(1, -1).split("', '")
-          : values
-        )
-          .map((v) => `(${SqlString.trim(v)})`)
-          .join("|")})'`
+        return `${field} !~* '${formatValue(values).join("|")}'`
       } else {
         return undefined // not supported
       }
@@ -693,12 +683,9 @@ const operators = {
       fieldDef
     ) => {
       if (valueSrc == "value") {
-        return `${field} ~* '(${(typeof values === "string"
-          ? values.slice(1, -1).split("', '")
-          : values
-        )
-          .map((v) => `(${SqlString.trim(v)})`)
-          .join("|")})'`
+        return formatValue(values)
+          .map((v) => `${field} ~* '${v}'`)
+          .join(" AND ")
       } else {
         return undefined // not supported
       }
@@ -1746,4 +1733,18 @@ export default {
   widgets,
   types,
   settings,
+}
+
+function formatValue(values) {
+  return (
+    typeof values === "string"
+      ? values.slice(1, -1).split("', '")
+      : values.map((v) => v.slice(1, -1))
+  ).map((v) =>
+    v.startsWith("<") && v.endsWith(">")
+      ? // trim < and >
+        v.slice(1, -1)
+      : // Escape regex if the value does not start with < and ends with >
+        v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  )
 }
